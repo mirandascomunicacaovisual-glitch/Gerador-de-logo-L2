@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { generateLogo, chatWithAI } from './services/geminiService';
 import { Message, LogoConfig, GenerationStatus } from './types';
 
@@ -21,11 +21,13 @@ declare global {
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
+  const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Bem-vindo ao L2 Gerador-Logo. Estou pronto para forjar sua identidade épica. O que vamos criar hoje?'
+      content: 'Canais de forja prontos. Bem-vindo ao L2 Gerador-Logo. Qual será o nome do seu império?'
     }
   ]);
   const [imageHistory, setImageHistory] = useState<string[]>([]);
@@ -39,30 +41,54 @@ const App: React.FC = () => {
     symbol: 'Eagle Crest'
   });
 
-  useEffect(() => {
-    const checkInitialAuth = async () => {
-      if (window.aistudio?.hasSelectedApiKey) {
-        try {
-          const hasKey = await window.aistudio.hasSelectedApiKey();
-          setIsAuthenticated(hasKey);
-        } catch {
-          setIsAuthenticated(false);
-        }
+  const checkAuthStatus = useCallback(async () => {
+    if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+      try {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        setIsAuthenticated(hasKey);
+      } catch (err) {
+        console.error("Falha ao verificar chave:", err);
+        setIsAuthenticated(false);
       }
-      setCheckingAuth(false);
-    };
-    checkInitialAuth();
+    } else {
+      // Se não estiver no ambiente AI Studio, dependemos do process.env.API_KEY injetado
+      // Mas para seguir o fluxo de "Login Google", permitimos avançar se houver uma chave no env
+      if (process.env.API_KEY && process.env.API_KEY !== 'undefined') {
+        setIsAuthenticated(true);
+      }
+    }
+    setCheckingAuth(false);
   }, []);
 
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
   const handleLogin = async () => {
-    if (window.aistudio?.openSelectKey) {
+    setIsLoggingIn(true);
+    
+    // Tenta usar o fluxo oficial do AI Studio (Google Login/Key Selection)
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
       try {
         await window.aistudio.openSelectKey();
-        // Conforme as regras: assumir sucesso após o gatilho para evitar race condition
+        // Regra de Race Condition: Assumir sucesso e prosseguir imediatamente
         setIsAuthenticated(true);
       } catch (error) {
         console.error("Erro ao abrir seletor de chave:", error);
+        alert("Ocorreu um erro ao abrir a autenticação do Google. Certifique-se de que os pop-ups não estão bloqueados.");
+      } finally {
+        setIsLoggingIn(false);
       }
+    } else {
+      // Fallback para quando o app é aberto fora do ambiente esperado
+      console.warn("Ambiente de seleção de chave não detectado.");
+      // Se tivermos uma chave de fallback, permitimos o acesso para não travar o cliente
+      if (process.env.API_KEY) {
+        setIsAuthenticated(true);
+      } else {
+        alert("Este aplicativo requer o ambiente do Google AI Studio para autenticação. Se você for o desenvolvedor, verifique sua configuração de API_KEY.");
+      }
+      setIsLoggingIn(false);
     }
   };
 
@@ -91,17 +117,17 @@ const App: React.FC = () => {
     setIsRotating(false);
 
     try {
-      const visualKeywords = ['mude', 'altere', 'cor', 'logo', 'fogo', 'fire', 'render', '3d', 'criar', 'gerar', 'remover', 'tira', 'bota'];
+      const visualKeywords = ['mude', 'altere', 'cor', 'logo', 'fogo', 'fire', 'render', '3d', 'criar', 'gerar', 'remover', 'tira', 'bota', 'image', 'imagem'];
       const currentImage = currentImageIndex >= 0 ? imageHistory[currentImageIndex] : null;
       const isVisualRequest = visualKeywords.some(kw => text.toLowerCase().includes(kw)) || !!uploadedImage || !currentImage;
 
       if (isVisualRequest) {
-        const isRefinement = !!currentImage && !text.toLowerCase().includes('criar novo');
+        const isRefinement = !!currentImage && !text.toLowerCase().includes('criar novo') && !text.toLowerCase().includes('gerar novo');
         const sourceImage = uploadedImage || currentImage || undefined;
         
         const prompt = isRefinement 
-          ? `REFINE LOGO: ${text}. Name: ${logoConfig.serverName}.`
-          : `CREATE LOGO: ${text}. Name: ${logoConfig.serverName}.`;
+          ? `Refine this logo: ${text}. Focus on the server name "${logoConfig.serverName}". Style: ${logoConfig.style}.`
+          : `Create a professional 3D MMORPG logo for a server named "${logoConfig.serverName}". Style: ${logoConfig.style}, Color: ${logoConfig.colorScheme}, Symbol: ${logoConfig.symbol}. Prompt details: ${text}`;
         
         const resultImage = await generateLogo(prompt, sourceImage, isRefinement);
         
@@ -110,7 +136,7 @@ const App: React.FC = () => {
           newHistory.push(resultImage);
           setImageHistory(newHistory);
           setCurrentImageIndex(newHistory.length - 1);
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja concluída com sucesso!' }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'A forja foi concluída. Sua nova identidade visual está pronta para ser baixada.' }]);
           setStatus(GenerationStatus.SUCCESS);
         }
       } else {
@@ -119,12 +145,13 @@ const App: React.FC = () => {
         setStatus(GenerationStatus.IDLE);
       }
     } catch (error: any) {
-      console.error("API Error - Possible key issue:", error);
+      console.error("Erro na Forja:", error);
       const errorMessage = error?.message || "";
       
-      if (errorMessage.includes("Requested entity was not found")) {
-        // Reset auth if key is invalid
+      // Se a chave expirou ou foi invalidada, forçamos o re-login
+      if (errorMessage.includes("Requested entity was not found") || errorMessage.includes("API_KEY_INVALID")) {
         setIsAuthenticated(false);
+        alert("Sua sessão de autenticação expirou. Por favor, conecte-se novamente.");
       }
 
       if (errorMessage === 'QUOTA_EXCEEDED') {
@@ -141,16 +168,17 @@ const App: React.FC = () => {
   };
 
   const handleQuickGenerate = () => {
-    if (!logoConfig.serverName) return alert("Digite o nome do servidor.");
-    handleSendMessage(`Forje uma logomarca 3D épica para ${logoConfig.serverName}`);
+    if (!logoConfig.serverName) return alert("Por favor, digite o nome do servidor antes de forjar.");
+    handleSendMessage(`Forje uma logomarca 3D épica e moderna para o servidor ${logoConfig.serverName}. Use o estilo ${logoConfig.style}.`);
   };
 
   if (checkingAuth) {
     return (
-      <div className="h-screen w-full bg-[#050507] flex items-center justify-center">
-        <div className="text-amber-500 animate-spin text-4xl">
-          <i className="fa-solid fa-circle-notch"></i>
+      <div className="h-screen w-full bg-[#050507] flex flex-col items-center justify-center">
+        <div className="text-amber-500 animate-spin text-5xl mb-4">
+          <i className="fa-solid fa-fire-flame-curved"></i>
         </div>
+        <p className="text-amber-500/50 font-cinzel tracking-widest text-sm animate-pulse">Iniciando Forja...</p>
       </div>
     );
   }
@@ -158,42 +186,63 @@ const App: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <div className="h-screen w-full bg-[#050507] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-        {/* Decorative Background Elements */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent opacity-50"></div>
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-500/15 via-transparent to-transparent opacity-60"></div>
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/60 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/20 to-transparent"></div>
         
-        <div className="z-10 max-w-lg glass p-10 rounded-2xl border-amber-500/20 shadow-[0_0_50px_rgba(245,158,11,0.1)]">
-          <div className="w-20 h-20 bg-amber-500 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] mx-auto mb-8">
-            <i className="fa-solid fa-fire-flame-curved text-4xl text-black"></i>
+        <div className="z-10 max-w-lg glass p-10 rounded-3xl border-amber-500/20 shadow-[0_0_60px_rgba(245,158,11,0.15)] transform transition-all duration-700 hover:scale-[1.01]">
+          <div className="w-24 h-24 bg-amber-500 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(245,158,11,0.4)] mx-auto mb-10 relative">
+            <i className="fa-solid fa-fire-flame-curved text-5xl text-black"></i>
+            <div className="absolute -inset-1 border border-amber-500/50 rounded-3xl animate-ping opacity-20"></div>
           </div>
           
-          <h1 className="text-4xl font-cinzel font-black tracking-widest text-white mb-4">L2 GERADOR-LOGO</h1>
-          <p className="text-gray-400 font-light mb-8 leading-relaxed">
-            Para acessar o estúdio de forja épica e garantir o melhor desempenho na geração das suas logomarcas, é necessário autenticar com sua conta Google.
+          <h1 className="text-5xl font-cinzel font-black tracking-tighter text-white mb-6">L2 LOGO <span className="text-amber-500">FORGE</span></h1>
+          <p className="text-gray-400 font-light mb-10 leading-relaxed text-lg px-4">
+            Acesse o estúdio profissional de criação de identidades visuais para comunidades de Lineage 2. Conecte sua conta para garantir renderização Pro.
           </p>
 
           <button
             onClick={handleLogin}
-            className="w-full py-5 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-xl transition-all shadow-[0_4px_25px_rgba(245,158,11,0.3)] flex items-center justify-center gap-3 uppercase tracking-tighter mb-6 group"
+            disabled={isLoggingIn}
+            className="w-full py-6 bg-amber-500 hover:bg-amber-400 disabled:bg-gray-800 disabled:text-gray-500 text-black font-black rounded-2xl transition-all shadow-[0_10px_35px_rgba(245,158,11,0.4)] flex items-center justify-center gap-4 uppercase tracking-tight mb-8 group overflow-hidden relative"
           >
-            <i className="fa-brands fa-google text-xl group-hover:scale-110 transition-transform"></i>
-            Entrar e Selecionar Chave
+            {isLoggingIn ? (
+              <i className="fa-solid fa-spinner fa-spin text-2xl"></i>
+            ) : (
+              <>
+                <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
+                <i className="fa-brands fa-google text-2xl"></i>
+                <span className="text-xl">Entrar com Google</span>
+              </>
+            )}
           </button>
 
-          <div className="text-[10px] text-gray-500 uppercase tracking-widest">
-            <p className="mb-2">Requer projeto com faturamento ativo para modelos Pro</p>
+          <div className="space-y-4">
+            <div className="text-[11px] text-gray-500 uppercase tracking-[0.2em] font-bold">
+              <i className="fa-solid fa-shield-halved mr-2 text-amber-500/50"></i>
+              Ambiente Seguro Google Cloud Console
+            </div>
+            
             <a 
               href="https://ai.google.dev/gemini-api/docs/billing" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-amber-500/60 hover:text-amber-500 transition-colors underline decoration-dotted underline-offset-4"
+              className="inline-block text-[10px] text-amber-500/50 hover:text-amber-500 transition-colors underline decoration-dotted underline-offset-4 uppercase tracking-widest"
             >
-              Documentação de Faturamento
+              Consultar Faturamento e Limites
             </a>
           </div>
         </div>
         
-        <p className="absolute bottom-8 text-[10px] text-gray-600 font-cinzel tracking-[0.3em]">Identity Forge v2.5 • Developed for L2 Communities</p>
+        <div className="absolute bottom-10 flex flex-col items-center gap-2">
+            <div className="flex gap-4 mb-2">
+                <i className="fa-solid fa-gem text-amber-500/20"></i>
+                <i className="fa-solid fa-bolt text-amber-500/20"></i>
+                <i className="fa-solid fa-crown text-amber-500/20"></i>
+            </div>
+            <p className="text-[10px] text-gray-600 font-cinzel tracking-[0.5em] uppercase">Forging Legends Since 2024</p>
+        </div>
       </div>
     );
   }

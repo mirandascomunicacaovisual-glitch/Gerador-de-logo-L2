@@ -1,7 +1,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Hierarquia de modelos otimizada para estabilidade (Flash primeiro para evitar 429)
+// Hierarquia de modelos otimizada para estabilidade
 const IMAGE_MODELS_POOL = [
   'gemini-2.5-flash-image',
   'gemini-3-pro-image-preview'
@@ -15,9 +15,6 @@ const CHAT_MODELS_POOL = [
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Sistema de Chamada Inteligente com Rotação de Modelo e Limpeza de Contexto
- */
 async function executeWithAutoRotation<T>(
   taskType: 'image' | 'chat',
   fn: (modelId: string, isOptimized: boolean) => Promise<T>,
@@ -31,15 +28,18 @@ async function executeWithAutoRotation<T>(
     const isOptimized = attempt > 0;
 
     try {
-      console.log(`Tentativa ${attempt + 1}: Usando ${currentModel} (Otimizado: ${isOptimized})`);
       return await fn(currentModel, isOptimized);
     } catch (error: any) {
       lastError = error;
       const message = error?.message || "";
-      const isQuotaError = message.includes("429") || message.includes("RESOURCE_EXHAUSTED") || message.includes("quota");
+      
+      // Erros críticos de autenticação ou chave não encontrada devem subir direto
+      if (message.includes("Requested entity was not found") || message.includes("API_KEY_INVALID") || message.includes("401") || message.includes("403")) {
+        throw error;
+      }
 
+      const isQuotaError = message.includes("429") || message.includes("RESOURCE_EXHAUSTED") || message.includes("quota");
       if (isQuotaError && attempt < maxRetries - 1) {
-        // Rotação silenciosa: espera um pouco e tenta o próximo modelo da lista
         await sleep(Math.pow(2, attempt) * 1000);
         continue;
       }
@@ -59,16 +59,18 @@ const handleApiError = (error: any) => {
 
 export const generateLogo = async (prompt: string, baseImage?: string, isRefinement: boolean = false) => {
   return executeWithAutoRotation('image', async (modelId, isOptimized) => {
-    // FIX: Always create new instance right before call to use current API key
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    const systemPrompt = isOptimized 
-      ? "L2 3D LOGO ARTIST. EPIC STYLE."
-      : "ACT AS A WORLD-CLASS SENIOR ART DIRECTOR FOR AAA MMORPG BRANDING. STYLE: UNREAL ENGINE 5, HYPER-REALISM.";
+    const systemPrompt = `
+      ACT AS A MASTER 3D GRAPHIC DESIGNER SPECIALIZING IN MODERN MMORPG LOGOS (LINEAGE 2 STYLE).
+      STYLE: UNREAL ENGINE 5 RENDER, 8K RESOLUTION, CINEMATIC LIGHTING, EPIC COMPOSITION.
+      MANDATORY: NO GENERIC FONTS. USE STYLIZED, EMBOSSED, METALLIC OR CRYSTALLINE TYPOGRAPHY.
+      CONTEXT: HIGH-END GAME BRANDING.
+    `;
 
     const instruction = isRefinement 
-      ? `Update: ${prompt}` 
-      : `Create: ${prompt}`;
+      ? `MODIFICATION REQUEST: ${prompt}. PLEASE UPDATE THE EXISTING ARTWORK MAINTAINING THE SAME THEME.` 
+      : `NEW MASTERPIECE LOGO REQUEST: ${prompt}. ENSURE THE SERVER NAME IS HIGHLY VISIBLE IN A STYLIZED CUSTOM FONT.`;
 
     const parts: any[] = [{ text: `${systemPrompt}\n${instruction}` }];
 
@@ -85,7 +87,6 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
       aspectRatio: "1:1",
     };
 
-    // FIX: imageSize is only supported on gemini-3-pro-image-preview
     if (modelId === 'gemini-3-pro-image-preview') {
       imageConfig.imageSize = "1K";
     }
@@ -98,7 +99,6 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
       }
     });
 
-    // FIX: Correctly iterate through parts to find image, as response may contain mixed types
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
         return `data:image/png;base64,${part.inlineData.data}`;
@@ -110,9 +110,8 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
 
 export const chatWithAI = async (message: string, history: { role: 'user' | 'assistant', content: string }[]) => {
   return executeWithAutoRotation('chat', async (modelId, isOptimized) => {
-    // FIX: Always create new instance right before call to use current API key
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const relevantHistory = isOptimized ? history.slice(-2) : history;
+    const relevantHistory = isOptimized ? history.slice(-4) : history;
 
     const chat = ai.chats.create({
       model: modelId,
@@ -121,11 +120,10 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "Diretor L2 Forge. Seja breve e técnico.",
+        systemInstruction: "You are 'L2 Logo Forge Director'. Be technical, epic, and concise. Help users refine their game logo design choices.",
       },
     });
 
-    // FIX: Accessing response.text property directly as per guidelines
     const response = await chat.sendMessage({ message });
     return response.text;
   }).catch(handleApiError);
