@@ -19,6 +19,8 @@ declare global {
 }
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -29,7 +31,6 @@ const App: React.FC = () => {
   const [imageHistory, setImageHistory] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(-1);
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
-  const [hasPersonalKey, setHasPersonalKey] = useState<boolean>(false);
   const [isRotating, setIsRotating] = useState(false);
   const [logoConfig, setLogoConfig] = useState<LogoConfig>({
     serverName: '',
@@ -39,18 +40,31 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    const checkKey = async () => {
+    const checkInitialAuth = async () => {
       if (window.aistudio?.hasSelectedApiKey) {
         try {
           const hasKey = await window.aistudio.hasSelectedApiKey();
-          setHasPersonalKey(hasKey);
+          setIsAuthenticated(hasKey);
         } catch {
-          setHasPersonalKey(false);
+          setIsAuthenticated(false);
         }
       }
+      setCheckingAuth(false);
     };
-    checkKey();
+    checkInitialAuth();
   }, []);
+
+  const handleLogin = async () => {
+    if (window.aistudio?.openSelectKey) {
+      try {
+        await window.aistudio.openSelectKey();
+        // Conforme as regras: assumir sucesso após o gatilho para evitar race condition
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error("Erro ao abrir seletor de chave:", error);
+      }
+    }
+  };
 
   const handleResetSession = () => {
     setMessages([{
@@ -62,13 +76,6 @@ const App: React.FC = () => {
     setCurrentImageIndex(-1);
     setStatus(GenerationStatus.IDLE);
     setIsRotating(false);
-  };
-
-  const handleOpenKeySelector = async () => {
-    if (window.aistudio?.openSelectKey) {
-      await window.aistudio.openSelectKey();
-      setHasPersonalKey(true);
-    }
   };
 
   const handleUndo = () => {
@@ -112,9 +119,14 @@ const App: React.FC = () => {
         setStatus(GenerationStatus.IDLE);
       }
     } catch (error: any) {
-      console.error("Auto-Recovery Triggered:", error);
+      console.error("API Error - Possible key issue:", error);
       const errorMessage = error?.message || "";
       
+      if (errorMessage.includes("Requested entity was not found")) {
+        // Reset auth if key is invalid
+        setIsAuthenticated(false);
+      }
+
       if (errorMessage === 'QUOTA_EXCEEDED') {
         setIsRotating(true);
         setTimeout(() => {
@@ -133,6 +145,59 @@ const App: React.FC = () => {
     handleSendMessage(`Forje uma logomarca 3D épica para ${logoConfig.serverName}`);
   };
 
+  if (checkingAuth) {
+    return (
+      <div className="h-screen w-full bg-[#050507] flex items-center justify-center">
+        <div className="text-amber-500 animate-spin text-4xl">
+          <i className="fa-solid fa-circle-notch"></i>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="h-screen w-full bg-[#050507] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+        {/* Decorative Background Elements */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent opacity-50"></div>
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
+        
+        <div className="z-10 max-w-lg glass p-10 rounded-2xl border-amber-500/20 shadow-[0_0_50px_rgba(245,158,11,0.1)]">
+          <div className="w-20 h-20 bg-amber-500 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] mx-auto mb-8">
+            <i className="fa-solid fa-fire-flame-curved text-4xl text-black"></i>
+          </div>
+          
+          <h1 className="text-4xl font-cinzel font-black tracking-widest text-white mb-4">L2 GERADOR-LOGO</h1>
+          <p className="text-gray-400 font-light mb-8 leading-relaxed">
+            Para acessar o estúdio de forja épica e garantir o melhor desempenho na geração das suas logomarcas, é necessário autenticar com sua conta Google.
+          </p>
+
+          <button
+            onClick={handleLogin}
+            className="w-full py-5 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-xl transition-all shadow-[0_4px_25px_rgba(245,158,11,0.3)] flex items-center justify-center gap-3 uppercase tracking-tighter mb-6 group"
+          >
+            <i className="fa-brands fa-google text-xl group-hover:scale-110 transition-transform"></i>
+            Entrar e Selecionar Chave
+          </button>
+
+          <div className="text-[10px] text-gray-500 uppercase tracking-widest">
+            <p className="mb-2">Requer projeto com faturamento ativo para modelos Pro</p>
+            <a 
+              href="https://ai.google.dev/gemini-api/docs/billing" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-amber-500/60 hover:text-amber-500 transition-colors underline decoration-dotted underline-offset-4"
+            >
+              Documentação de Faturamento
+            </a>
+          </div>
+        </div>
+        
+        <p className="absolute bottom-8 text-[10px] text-gray-600 font-cinzel tracking-[0.3em]">Identity Forge v2.5 • Developed for L2 Communities</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#050507]">
       <Sidebar 
@@ -140,8 +205,8 @@ const App: React.FC = () => {
         setConfig={setLogoConfig} 
         onGenerate={handleQuickGenerate}
         status={status}
-        onSelectKey={handleOpenKeySelector}
-        hasKey={hasPersonalKey}
+        onSelectKey={handleLogin}
+        hasKey={isAuthenticated}
         onReset={handleResetSession}
       />
 
@@ -153,7 +218,7 @@ const App: React.FC = () => {
             serverName={logoConfig.serverName}
             onUndo={handleUndo}
             canUndo={currentImageIndex > 0}
-            onSelectKey={handleOpenKeySelector}
+            onSelectKey={handleLogin}
             isRetrying={status === GenerationStatus.LOADING || isRotating}
           />
         </section>
