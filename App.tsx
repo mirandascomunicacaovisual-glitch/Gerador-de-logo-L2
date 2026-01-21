@@ -47,7 +47,6 @@ const App: React.FC = () => {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         setIsAuthenticated(hasKey);
       } else if (process.env.API_KEY && process.env.API_KEY !== 'undefined') {
-        // Se houver uma chave injetada no ambiente, autentica automaticamente
         setIsAuthenticated(true);
       }
     } catch (err) {
@@ -66,19 +65,19 @@ const App: React.FC = () => {
     setIsLoggingIn(true);
     
     try {
-      // Tenta abrir o seletor oficial de contas/chaves do Google AI Studio
+      // CHAMADA CRITICA: Abre o seletor de contas do Google
       if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
         await window.aistudio.openSelectKey();
       } else {
-        console.warn("API de Login do Google não detectada. Tentando prosseguir com as credenciais disponíveis.");
+        console.warn("Ambiente externo detectado. Por favor, use o seletor de chaves do navegador.");
       }
       
-      // REGRA DE OURO: Assume sucesso imediato para evitar race conditions e permitir que o usuário use o app
+      // REGRA DE OURO: Assume sucesso imediato para evitar race conditions 
+      // e permitir que o usuário use o app enquanto a aba secundária carrega.
       setIsAuthenticated(true);
       setStatus(GenerationStatus.IDLE);
     } catch (error) {
-      console.error("Erro ao disparar login Google:", error);
-      // Fallback: mesmo com erro, tentamos liberar o acesso para o usuário
+      console.error("Erro ao abrir login:", error);
       setIsAuthenticated(true);
     } finally {
       setIsLoggingIn(false);
@@ -141,7 +140,6 @@ const App: React.FC = () => {
       console.error("Erro na Forja:", error);
       const errorMessage = error?.message || "";
       
-      // Se houver erro de chave, forçamos o login novamente
       if (errorMessage.includes("Requested entity was not found") || errorMessage.includes("API_KEY_INVALID")) {
         setIsAuthenticated(false);
       }
@@ -190,7 +188,7 @@ const App: React.FC = () => {
           <button
             onClick={handleLogin}
             disabled={isLoggingIn}
-            className="w-full py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-gray-800 text-black font-black rounded-2xl transition-all shadow-[0_10px_40px_rgba(245,158,11,0.3)] flex items-center justify-center gap-4 uppercase tracking-tighter mb-8 active:scale-95"
+            className="w-full py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-gray-800 text-black font-black rounded-2xl transition-all shadow-[0_10px_40px_rgba(245,158,11,0.3)] flex items-center justify-center gap-4 uppercase tracking-tighter mb-6 active:scale-95"
           >
             {isLoggingIn ? (
               <i className="fa-solid fa-spinner fa-spin text-xl"></i>
@@ -202,9 +200,14 @@ const App: React.FC = () => {
             )}
           </button>
 
-          <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
-            <i className="fa-solid fa-shield-halved text-amber-500/40"></i>
-            Conexão Segura e Direta
+          <div className="flex flex-col items-center gap-4">
+            <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
+              <i className="fa-solid fa-shield-halved text-amber-500/40"></i>
+              Conexão Segura e Direta
+            </div>
+            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[9px] text-amber-500/30 hover:text-amber-500/60 transition-colors uppercase tracking-widest underline decoration-amber-500/10 underline-offset-4">
+              Informações sobre faturamento
+            </a>
           </div>
         </div>
       </div>
