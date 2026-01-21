@@ -25,16 +25,17 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
         {status === GenerationStatus.ERROR ? (
           <div className="text-center p-8 animate-in fade-in zoom-in duration-300">
             <i className="fa-solid fa-triangle-exclamation text-6xl text-amber-500/50 mb-4"></i>
-            <h3 className="text-xl font-cinzel text-white mb-2">Instabilidade na Rede</h3>
+            <h3 className="text-xl font-cinzel text-white mb-2 uppercase tracking-widest">Limite Atingido</h3>
             <p className="text-gray-400 text-sm mb-6 max-w-sm">
-              O Google atingiu o limite de requisições. O sistema está tentando reconectar usando canais alternativos. Aguarde um momento.
+              O Google atingiu o limite de requisições gratuitas. Para continuar forjando com Gemini 3 Pro e alta qualidade, ative sua conta pessoal.
             </p>
             {onSelectKey && (
               <button 
                 onClick={onSelectKey}
-                className="px-8 py-3 bg-amber-500 text-black font-black rounded-lg uppercase tracking-widest text-xs hover:bg-amber-400 transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                className="px-8 py-4 bg-amber-500 text-black font-black rounded-xl uppercase tracking-widest text-xs hover:bg-amber-400 transition-all shadow-[0_15px_35px_rgba(245,158,11,0.3)] flex items-center gap-3 mx-auto"
               >
-                Ativar Key Pessoal
+                <i className="fa-brands fa-google"></i>
+                Ativar Conta Google
               </button>
             )}
           </div>

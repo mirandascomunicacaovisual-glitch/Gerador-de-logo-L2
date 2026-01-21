@@ -58,26 +58,24 @@ const handleApiError = (error: any) => {
 
 export const generateLogo = async (prompt: string, baseImage?: string, isRefinement: boolean = false) => {
   return executeWithAutoRotation('image', async (modelId, isOptimized) => {
-    // Nova instância para usar a chave mais recente do seletor
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ROLE: MASTER BRAND ARCHITECT FOR HIGH-END GAMING COMMUNITIES.
-      OBJECTIVE: GENERATE A MODERN 3D LOGO WITH STYLIZED CUSTOM TYPOGRAPHY.
+      ROLE: MASTER LOGO ARCHITECT FOR MODERN ESPORTS & MMORPG COMMUNITIES.
+      OBJECTIVE: Forge a state-of-the-art 3D logo with CUSTOM STYLIZED TYPOGRAPHY.
       
-      CORE GUIDELINES:
-      - TYPOGRAPHY: USE STYLIZED, CUSTOM-MADE FONTS. FONT MUST BE EMBOSSED, 3D METALLIC, OR NEON CRYSTALLINE. NO STANDARD FONTS (ARIAL, TIMES).
-      - RENDER STYLE: UNREAL ENGINE 5, CINEMATIC 8K, RAY-TRACING, VOLUMETRIC LIGHTING.
-      - AESTHETIC: MODERN MMORPG (LINEAGE 2 / AION / WORLD OF WARCRAFT STYLE). 
-      - ELEMENTS: SHARP EDGES, EPIC AURA, MAGICAL GLOW, OR METALLIC FINISH.
-      - COMPOSITION: CENTERED LOGO ON A DARK OR CLEAN BACKGROUND.
-      
-      MANDATORY: THE SERVER NAME MUST BE RENDERED IN A STYLIZED ARTISTIC FONT AS THE PIECE'S CENTERPIECE.
+      CRITICAL INSTRUCTIONS:
+      - TYPOGRAPHY: NEVER USE GENERIC FONTS. Create unique, stylized, custom-drawn lettering. 
+      - EFFECTS: Letters must be 3D, embossed, metallic, glowing, or crystalline. Use bevels, sharp edges, and dramatic depth.
+      - RENDER: Cinematic 8K, Unreal Engine 5 style, volumetric lighting, ray-tracing reflections.
+      - AESTHETIC: Modern, aggressive, epic, and current (2025 gaming trends).
+      - COMPOSITION: Centralized brand mark with the server name as the hero element.
+      - NO NOISE: Clean, professional, high-impact branding.
     `;
 
     const instruction = isRefinement 
-      ? `UPDATING LOGO: ${prompt}. Apply changes using professional 3D rendering and stylized game typography.` 
-      : `CREATING NEW BRAND: ${prompt}. Forge a modern, epic 3D logo with a unique stylized font that represents a top-tier server.`;
+      ? `REFINING BRAND ARTWORK: ${prompt}. Apply modern 3D stylized typography and professional gaming aesthetics.` 
+      : `FORGING NEW IDENTITY: ${prompt}. Focus on a unique stylized font for the name. The result must be a top-tier modern MMORPG logo.`;
 
     const parts: any[] = [{ text: `${systemPrompt}\n${instruction}` }];
 
@@ -127,7 +125,7 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "You are the 'Director of Forge'. Be professional, epic, and specialized in game branding. Always recommend stylized fonts and modern 3D effects for Lineage 2 server logos.",
+        systemInstruction: "You are the 'Creative Director of the Forge'. Be professional, epic, and focused on current gaming branding trends. Suggest only stylized fonts and 3D effects for Lineage 2 server identities.",
       },
     });
 
