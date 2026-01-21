@@ -27,12 +27,15 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
             <i className="fa-solid fa-triangle-exclamation text-6xl text-amber-500/50 mb-4"></i>
             <h3 className="text-xl font-cinzel text-white mb-2 uppercase tracking-widest">Limite Atingido</h3>
             <p className="text-gray-400 text-sm mb-6 max-w-sm">
-              O limite gratuito foi atingido. Para continuar forjando com Gemini 3 Pro e alta fidelidade, entre com sua conta Google pessoal.
+              O Google atingiu o limite de requisições gratuitas. Para continuar forjando com Gemini 3 Pro e fontes personalizadas, entre com sua conta Google.
             </p>
             {onSelectKey && (
               <button 
-                onClick={onSelectKey}
-                className="px-8 py-4 bg-amber-500 text-black font-black rounded-xl uppercase tracking-widest text-xs hover:bg-amber-400 transition-all shadow-[0_15px_35px_rgba(245,158,11,0.3)] flex items-center gap-3 mx-auto"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onSelectKey();
+                }}
+                className="px-8 py-4 bg-amber-500 text-black font-black rounded-xl uppercase tracking-widest text-xs hover:bg-amber-400 transition-all shadow-[0_15px_35px_rgba(245,158,11,0.3)] flex items-center gap-3 mx-auto active:scale-95"
               >
                 <i className="fa-brands fa-google"></i>
                 Entrar com Conta Google

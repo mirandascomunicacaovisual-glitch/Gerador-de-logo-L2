@@ -58,24 +58,24 @@ const handleApiError = (error: any) => {
 
 export const generateLogo = async (prompt: string, baseImage?: string, isRefinement: boolean = false) => {
   return executeWithAutoRotation('image', async (modelId, isOptimized) => {
-    // Sempre cria nova instância para pegar a API_KEY mais recente do processo
+    // Nova instância para garantir o uso da chave mais recente do usuário
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ROLE: MASTER BRAND ARCHITECT FOR HIGH-END GAMING COMMUNITIES (2025 TRENDS).
-      CORE MISSION: GENERATE A STUNNING 3D LOGO WITH UNIQUE STYLIZED TYPOGRAPHY.
+      ROLE: ELITE BRAND DESIGNER FOR MODERN MMORPG SERVERS (2025 STYLE).
+      MISSION: CREATE A STUNNING 3D LOGO WITH HIGHLY STYLIZED CUSTOM TYPOGRAPHY.
       
-      MANDATORY RULES:
-      - TYPOGRAPHY: NEVER USE GENERIC FONTS (ARIAL, TIMES). CREATE CUSTOM, ARTISTIC, STYLIZED LETTERING.
-      - FONT STYLE: LETTERS MUST BE EMBOSSED, 3D METALLIC, GLOWING CRYSTAL, OR BEVELED CHROME.
-      - RENDER QUALITY: CINEMATIC 8K, UNREAL ENGINE 5 STYLE, VOLUMETRIC LIGHTING, RAY-TRACING REFLECTIONS.
-      - COMPOSITION: CENTERED, EPIC AURA, SHARP EDGES, MODERN GAMING VIBE.
-      - FOCUS: THE SERVER NAME IS THE MAIN ARTISTIC PIECE.
+      CRITICAL INSTRUCTIONS:
+      - TYPOGRAPHY: DO NOT USE STANDARD FONTS (ARIAL, TIMES, ETC). CREATE ARTISTIC, STYLIZED, UNIQUE LETTERING FOR THE SERVER NAME.
+      - FONT EFFECTS: LETTERS MUST BE 3D, BEVELED, METALLIC (GOLD/CHROME/STEEL), CRYSTALLINE, OR GLOWING NEON.
+      - RENDER STYLE: UNREAL ENGINE 5 QUALITY, CINEMATIC 8K, VOLUMETRIC LIGHTS, REALISTIC TEXTURES, RAY-TRACED REFLECTIONS.
+      - AESTHETIC: AGGRESSIVE, MODERN, CLEAN, AND EPIC. NO NOISE, ONLY PROFESSIONAL BRANDING.
+      - COMPOSITION: CENTERED LOGO ON DARK/CLEAN BACKGROUND.
     `;
 
     const instruction = isRefinement 
-      ? `UPDATING LOGO ARTWORK: ${prompt}. Apply modern 3D stylized typography and high-end gaming render.` 
-      : `FORGING NEW BRAND IDENTITY: ${prompt}. Create a unique stylized font for the name. Must look like a top-tier modern MMORPG logo.`;
+      ? `UPDATING LOGO: ${prompt}. Focus on stylized 3D typography and modern gaming render.` 
+      : `FORGING NEW IDENTITY: ${prompt}. Use a unique stylized artistic font for the name. Must look like a top-tier modern server logo.`;
 
     const parts: any[] = [{ text: `${systemPrompt}\n${instruction}` }];
 
@@ -125,7 +125,7 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "Você é o 'Diretor Criativo da Forja'. Seja épico e profissional. Recomende sempre fontes estilizadas e efeitos 3D modernos para logomarcas de servidores atuais.",
+        systemInstruction: "Você é o 'Diretor Criativo da Forja'. Seja épico e focado em marcas modernas. Recomende sempre tipografias estilizadas e efeitos 3D profissionais para logomarcas de jogos.",
       },
     });
 
