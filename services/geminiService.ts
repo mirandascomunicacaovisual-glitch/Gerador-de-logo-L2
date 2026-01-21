@@ -62,20 +62,21 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ROLE: ELITE BRAND DESIGNER FOR MODERN MMORPG SERVERS (2025 STYLE).
-      MISSION: CREATE A STUNNING 3D LOGO WITH HIGHLY STYLIZED CUSTOM TYPOGRAPHY.
+      ROLE: ELITE BRAND ARCHITECT FOR HIGH-END GAMING SERVERS (YEAR 2025 STYLE).
+      MISSION: CREATE A STUNNING 3D LOGO WITH ARTISTIC CUSTOM STYLIZED TYPOGRAPHY.
       
-      CRITICAL INSTRUCTIONS:
-      - TYPOGRAPHY: DO NOT USE STANDARD FONTS (ARIAL, TIMES, ETC). CREATE ARTISTIC, STYLIZED, UNIQUE LETTERING FOR THE SERVER NAME.
-      - FONT EFFECTS: LETTERS MUST BE 3D, BEVELED, METALLIC (GOLD/CHROME/STEEL), CRYSTALLINE, OR GLOWING NEON.
-      - RENDER STYLE: UNREAL ENGINE 5 QUALITY, CINEMATIC 8K, VOLUMETRIC LIGHTS, REALISTIC TEXTURES, RAY-TRACED REFLECTIONS.
-      - AESTHETIC: AGGRESSIVE, MODERN, CLEAN, AND EPIC. NO NOISE, ONLY PROFESSIONAL BRANDING.
-      - COMPOSITION: CENTERED LOGO ON DARK/CLEAN BACKGROUND.
+      MANDATORY RULES:
+      - TYPOGRAPHY: NEVER USE SYSTEM OR GENERIC FONTS (NO ARIAL, NO TIMES, NO BASIC SERIF). 
+      - FONT DESIGN: ALL LETTERS MUST BE CUSTOM-DRAWN, STYLIZED, ARTISTIC, AND 3D.
+      - VISUAL EFFECTS: LETTERS MUST HAVE METALLIC BEVELS (CHROME, GOLD, OBSIDIAN), VOLUMETRIC GLOW, AND DEPTH.
+      - RENDER QUALITY: UNREAL ENGINE 5 CINEMATIC STYLE, 8K RESOLUTION, RAY-TRACED REFLECTIONS.
+      - AESTHETIC: MODERN, AGGRESSIVE, AND CLEAN. PROFESSIONAL MMORPG BRANDING.
+      - BACKGROUND: CLEAN DARK BACKGROUND TO HIGHLIGHT THE BRANDING.
     `;
 
     const instruction = isRefinement 
-      ? `UPDATING LOGO: ${prompt}. Focus on stylized 3D typography and modern gaming render.` 
-      : `FORGING NEW IDENTITY: ${prompt}. Use a unique stylized artistic font for the name. Must look like a top-tier modern server logo.`;
+      ? `UPDATING LOGO: ${prompt}. Focus on stylized 3D typography and premium gaming render.` 
+      : `FORGING NEW IDENTITY: ${prompt}. Use a unique artistic font for the server name. Must look like a top-tier modern server logo.`;
 
     const parts: any[] = [{ text: `${systemPrompt}\n${instruction}` }];
 
@@ -125,7 +126,7 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "Você é o 'Diretor Criativo da Forja'. Seja épico e focado em marcas modernas. Recomende sempre tipografias estilizadas e efeitos 3D profissionais para logomarcas de jogos.",
+        systemInstruction: "Você é o 'Diretor de Marca da Forja'. Seja épico, técnico e focado em design moderno. Recomende sempre fontes estilizadas personalizadas e efeitos 3D profissionais para logomarcas de elite.",
       },
     });
 

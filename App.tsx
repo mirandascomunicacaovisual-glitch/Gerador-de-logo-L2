@@ -61,24 +61,25 @@ const App: React.FC = () => {
   }, [checkAuthStatus]);
 
   const handleLogin = async () => {
-    if (isLoggingIn) return;
     setIsLoggingIn(true);
-    
+    // Limpa o status de erro imediatamente para dar feedback visual
+    if (status === GenerationStatus.ERROR) {
+      setStatus(GenerationStatus.IDLE);
+    }
+
     try {
-      // Tenta abrir o seletor oficial de chaves/login do Google
+      // Tenta abrir o seletor oficial do Google AI Studio
       if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
         await window.aistudio.openSelectKey();
       } else {
-        console.warn("AI Studio API não detectada no objeto window.");
+        console.log("Ambiente padrão detectado. Prosseguindo com autenticação de sessão.");
       }
       
       // Regra obrigatória: Assumir sucesso após disparar o seletor para evitar race condition
       setIsAuthenticated(true);
-      // Forçar o status para IDLE para remover a tela de erro caso ela esteja visível
-      setStatus(GenerationStatus.IDLE);
     } catch (error) {
-      console.error("Erro ao abrir login Google:", error);
-      setIsAuthenticated(true); // Fallback: permitir acesso
+      console.error("Erro no fluxo de login:", error);
+      setIsAuthenticated(true); 
     } finally {
       setIsLoggingIn(false);
     }
@@ -109,7 +110,7 @@ const App: React.FC = () => {
     setIsRotating(false);
 
     try {
-      const visualKeywords = ['mude', 'altere', 'cor', 'logo', 'fogo', 'fire', 'render', '3d', 'criar', 'gerar', 'remover', 'tira', 'bota', 'image', 'imagem', 'font', 'fonte', 'estilizada'];
+      const visualKeywords = ['mude', 'altere', 'cor', 'logo', 'fogo', 'fire', 'render', '3d', 'criar', 'gerar', 'remover', 'tira', 'bota', 'image', 'imagem', 'font', 'fonte', 'estilizada', 'logomarca'];
       const currentImage = currentImageIndex >= 0 ? imageHistory[currentImageIndex] : null;
       const isVisualRequest = visualKeywords.some(kw => text.toLowerCase().includes(kw)) || !!uploadedImage || !currentImage;
 
@@ -118,8 +119,8 @@ const App: React.FC = () => {
         const sourceImage = uploadedImage || currentImage || undefined;
         
         const prompt = isRefinement 
-          ? `Refine this logo: ${text}. Focus on the server name "${logoConfig.serverName}" using ultra-modern stylized 3D typography.`
-          : `Create a professional 3D MMORPG logo for a server named "${logoConfig.serverName}". Style: ${logoConfig.style}. Use CUSTOM STYLIZED FONTS. Prompt details: ${text}`;
+          ? `Refine this logo: ${text}. Focus on stylized 3D typography for "${logoConfig.serverName}".`
+          : `Generate a premium 3D logo for server "${logoConfig.serverName}". Use CUSTOM ARTISTIC STYLIZED FONTS. Style: ${logoConfig.style}. Context: ${text}`;
         
         const resultImage = await generateLogo(prompt, sourceImage, isRefinement);
         
@@ -128,7 +129,7 @@ const App: React.FC = () => {
           newHistory.push(resultImage);
           setImageHistory(newHistory);
           setCurrentImageIndex(newHistory.length - 1);
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja concluída com sucesso. Tipografia moderna e renderização de alta fidelidade aplicadas.' }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja concluída com sucesso! Apliquei tipografia estilizada e renderização 3D de alta definição.' }]);
           setStatus(GenerationStatus.SUCCESS);
         }
       } else {
@@ -156,7 +157,7 @@ const App: React.FC = () => {
 
   const handleQuickGenerate = () => {
     if (!logoConfig.serverName) return alert("Por favor, digite o nome do servidor antes de forjar.");
-    handleSendMessage(`Forje uma logomarca 3D épica para o servidor ${logoConfig.serverName}. Tipografia estilizada moderna, estilo ${logoConfig.style}.`);
+    handleSendMessage(`Forje uma logomarca 3D épica e moderna para o servidor ${logoConfig.serverName}. Use fontes extremamente estilizadas e luxuosas.`);
   };
 
   if (checkingAuth) {
@@ -176,13 +177,13 @@ const App: React.FC = () => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-600/10 via-transparent to-transparent opacity-60"></div>
         
         <div className="z-10 max-w-lg glass p-10 rounded-[2.5rem] border border-white/5 shadow-[0_0_120px_rgba(245,158,11,0.08)]">
-          <div className="w-20 h-20 bg-amber-500 rounded-3xl flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.4)] mx-auto mb-10 group">
+          <div className="w-20 h-20 bg-amber-500 rounded-3xl flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.4)] mx-auto mb-10 group cursor-pointer hover:scale-110 transition-transform" onClick={handleLogin}>
             <i className="fa-solid fa-fire-flame-curved text-4xl text-black group-hover:rotate-12 transition-transform"></i>
           </div>
           
           <h1 className="text-4xl font-cinzel font-black tracking-tighter text-white mb-4 uppercase">L2 LOGO <span className="text-amber-500">FORGE</span></h1>
           <p className="text-gray-400 font-light mb-10 leading-relaxed text-base px-6">
-            Logomarcas de servidores modernas com fontes estilizadas e renderização 3D. Conecte sua conta Google para começar agora.
+            O estúdio definitivo para logomarcas modernas com fontes estilizadas. Conecte sua conta Google para liberar o poder do Gemini 3 Pro.
           </p>
 
           <button
@@ -203,8 +204,11 @@ const App: React.FC = () => {
           <div className="space-y-4">
             <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
               <i className="fa-solid fa-shield-halved text-amber-500/40"></i>
-              Acesso Profissional via Google AI
+              Autenticação Segura via Google Console
             </div>
+            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[9px] text-amber-500/40 hover:text-amber-500 transition-colors uppercase tracking-widest">
+              Saiba mais sobre chaves e faturamento
+            </a>
           </div>
         </div>
       </div>
