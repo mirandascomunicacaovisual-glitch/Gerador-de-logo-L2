@@ -65,15 +65,15 @@ const App: React.FC = () => {
     setIsLoggingIn(true);
     
     try {
-      // CHAMADA CRITICA: Abre o seletor de contas do Google
+      // CHAMADA EXCLUSIVA: Abre o seletor de contas do Google oficial (account chooser)
       if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
         await window.aistudio.openSelectKey();
       } else {
-        console.warn("Ambiente externo detectado. Por favor, use o seletor de chaves do navegador.");
+        console.warn("Acesso ao Google AI Studio não disponível no momento.");
       }
       
-      // REGRA DE OURO: Assume sucesso imediato para evitar race conditions 
-      // e permitir que o usuário use o app enquanto a aba secundária carrega.
+      // REGRA DE OURO: Assume sucesso imediato para liberar o app
+      // O usuário fará o login na aba/popup que abriu.
       setIsAuthenticated(true);
       setStatus(GenerationStatus.IDLE);
     } catch (error) {
@@ -142,9 +142,7 @@ const App: React.FC = () => {
       
       if (errorMessage.includes("Requested entity was not found") || errorMessage.includes("API_KEY_INVALID")) {
         setIsAuthenticated(false);
-      }
-
-      if (errorMessage === 'QUOTA_EXCEEDED') {
+      } else if (errorMessage === 'QUOTA_EXCEEDED' || errorMessage.includes("429")) {
         setStatus(GenerationStatus.ERROR);
       } else {
         setStatus(GenerationStatus.ERROR);
@@ -176,19 +174,19 @@ const App: React.FC = () => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-600/10 via-transparent to-transparent opacity-60"></div>
         
         <div className="z-10 max-w-lg glass p-10 rounded-[2.5rem] border border-white/5 shadow-[0_0_120px_rgba(245,158,11,0.08)]">
-          <div className="w-20 h-20 bg-amber-500 rounded-3xl flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.4)] mx-auto mb-10 group cursor-pointer hover:scale-110 transition-transform" onClick={handleLogin}>
-            <i className="fa-solid fa-fire-flame-curved text-4xl text-black group-hover:rotate-12 transition-transform"></i>
+          <div className="w-20 h-20 bg-amber-500 rounded-3xl flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.4)] mx-auto mb-10">
+            <i className="fa-solid fa-fire-flame-curved text-4xl text-black"></i>
           </div>
           
           <h1 className="text-4xl font-cinzel font-black tracking-tighter text-white mb-4 uppercase">L2 LOGO <span className="text-amber-500">FORGE</span></h1>
           <p className="text-gray-400 font-light mb-10 leading-relaxed text-base px-6">
-            Logomarcas de servidores modernas com fontes estilizadas. Conecte sua conta Google para liberar o poder do Gemini 3 Pro.
+            Logomarcas de servidores modernas com fontes estilizadas. Conecte sua conta Google para liberar o poder do Gemini.
           </p>
 
           <button
             onClick={handleLogin}
             disabled={isLoggingIn}
-            className="w-full py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-gray-800 text-black font-black rounded-2xl transition-all shadow-[0_10px_40px_rgba(245,158,11,0.3)] flex items-center justify-center gap-4 uppercase tracking-tighter mb-6 active:scale-95"
+            className="w-full py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-gray-800 text-black font-black rounded-2xl transition-all shadow-[0_10px_40px_rgba(245,158,11,0.3)] flex items-center justify-center gap-4 uppercase tracking-tighter mb-8 active:scale-95"
           >
             {isLoggingIn ? (
               <i className="fa-solid fa-spinner fa-spin text-xl"></i>
@@ -200,15 +198,17 @@ const App: React.FC = () => {
             )}
           </button>
 
-          <div className="flex flex-col items-center gap-4">
-            <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
-              <i className="fa-solid fa-shield-halved text-amber-500/40"></i>
-              Conexão Segura e Direta
-            </div>
-            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[9px] text-amber-500/30 hover:text-amber-500/60 transition-colors uppercase tracking-widest underline decoration-amber-500/10 underline-offset-4">
-              Informações sobre faturamento
-            </a>
+          <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
+            <i className="fa-solid fa-shield-halved text-amber-500/40"></i>
+            Conexão Segura e Direta
           </div>
+        </div>
+
+        {/* Link de faturamento separado e discreto no rodapé para evitar cliques acidentais */}
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center opacity-30 hover:opacity-100 transition-opacity">
+          <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[9px] text-gray-500 uppercase tracking-widest underline decoration-white/10 underline-offset-4">
+            Informações sobre conta e faturamento Google
+          </a>
         </div>
       </div>
     );
