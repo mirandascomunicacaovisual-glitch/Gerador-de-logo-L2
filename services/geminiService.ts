@@ -1,22 +1,24 @@
 
 import { GoogleGenAI } from "@google/genai";
 
+// Priorizamos o 2.5-flash-image por ser mais compatível com chaves gratuitas/padrão.
+// O 3-pro-image-preview é deixado como segunda opção ou para casos específicos.
 const IMAGE_MODELS_POOL = [
-  'gemini-3-pro-image-preview', 
-  'gemini-2.5-flash-image'
+  'gemini-2.5-flash-image',
+  'gemini-3-pro-image-preview'
 ];
 
 const CHAT_MODELS_POOL = [
-  'gemini-3-pro-preview',
-  'gemini-3-flash-preview'
+  'gemini-3-flash-preview',
+  'gemini-3-pro-preview'
 ];
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function executeWithAutoRotation<T>(
   taskType: 'image' | 'chat',
-  fn: (modelId: string, isOptimized: boolean) => Promise<T>,
-  maxRetries = 3
+  fn: (modelId: string) => Promise<T>,
+  maxRetries = 2
 ): Promise<T> {
   const modelPool = taskType === 'image' ? IMAGE_MODELS_POOL : CHAT_MODELS_POOL;
   let lastError: any;
@@ -24,13 +26,25 @@ async function executeWithAutoRotation<T>(
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const currentModel = modelPool[attempt] || modelPool[modelPool.length - 1];
     try {
-      return await fn(currentModel, attempt > 0);
+      return await fn(currentModel);
     } catch (error: any) {
       lastError = error;
-      const message = error?.message || "";
-      if (message.includes("Requested entity was not found") || message.includes("API_KEY_INVALID")) throw error;
+      const message = (error?.message || "").toLowerCase();
+      
+      // Detecção de erros de autenticação/permissão críticos
+      if (
+        message.includes("requested entity was not found") || 
+        message.includes("api_key_invalid") || 
+        message.includes("permission denied") || 
+        message.includes("401") || 
+        message.includes("403")
+      ) {
+        throw new Error(`AUTH_ERROR: ${error.message}`);
+      }
+      
+      // Rotação para o próximo modelo em caso de quota ou erro temporário
       if ((message.includes("429") || message.includes("quota")) && attempt < maxRetries - 1) {
-        await sleep(2000);
+        await sleep(1500);
         continue;
       }
       throw error;
@@ -44,19 +58,13 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ROLE: PREEMINENT BRAND DESIGNER FOR 2025.
-      OBJECTIVE: CREATE A LOGO THAT IS CUTTING-EDGE, MODERN, AND STYLIZED.
-      
-      CRITICAL DESIGN RULES:
-      - TYPOGRAPHY: USE ONLY HIGHLY CUSTOMIZED, STYLIZED SANS-SERIF OR FUTURISTIC GEOMETRIC FONTS. AVOID GENERIC GOTHIC OR OLD-FASHIONED SERIF FONTS.
-      - AESTHETIC: MINIMALIST BUT POWERFUL. THINK APPLE, TESLA, OR HIGH-END TECH BRANDS BUT WITH AN EPIC MMO TWIST.
-      - RENDERING: 3D DEPTH WITH SOFT RAY-TRACED SHADOWS, BRUSHED TITANIUM, MATTE BLACK, OR LIQUID GOLD MATERIALS.
-      - COMPOSITION: ICONIC SYMBOL INTEGRATED WITH THE NAME. USE NEGATIVE SPACE CREATIVELY.
-      - QUALITY: 8K RESOLUTION, CLEAN VECTOR-LIKE SHARPNESS, CINEMATIC STUDIO LIGHTING.
-      - NO BUSY BACKGROUNDS. SOLID DARK GREY OR BLACK ONLY.
+      ROLE: MASTER BRAND ARCHITECT 2025.
+      OBJECTIVE: DESIGN A MODERN, CUTTING-EDGE LOGO FOR L2 SERVERS.
+      STYLE: MINIMALIST, HIGH-END, STYLIZED TYPOGRAPHY, 3D GEOMETRIC ELEMENTS.
+      MANDATORY: NO GENERIC FONTS. THE TEXT MUST BE ARTISTICALLY STYLIZED AND FUTURISTIC.
     `;
 
-    const fullPrompt = `${systemPrompt}\n\nTASK: ${isRefinement ? 'Evolve this existing logo into a more modern 2025 masterpiece: ' : 'Create a brand new ultra-modern logo: '} ${prompt}. THE NAME MUST BE STYLIZED AND CLEAR.`;
+    const fullPrompt = `${systemPrompt}\n\nTASK: ${isRefinement ? 'Refine this existing logo to be ultra-modern: ' : 'Create a brand new futuristic logo: '} ${prompt}. THE NAME MUST BE STYLIZED.`;
 
     const parts: any[] = [{ text: fullPrompt }];
     if (baseImage) {
@@ -68,13 +76,17 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
       });
     }
 
-    const imageConfig: any = { aspectRatio: "1:1" };
-    if (modelId === 'gemini-3-pro-image-preview') imageConfig.imageSize = "1K";
+    const config: any = {};
+    if (modelId.includes('gemini-3')) {
+      config.imageConfig = { aspectRatio: "1:1", imageSize: "1K" };
+    } else {
+      config.imageConfig = { aspectRatio: "1:1" };
+    }
 
     const response = await ai.models.generateContent({
       model: modelId,
       contents: { parts },
-      config: { imageConfig }
+      config
     });
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
@@ -94,7 +106,7 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "Você é o 'Brand Architect Pro'. Sua missão é ajudar a definir marcas modernas de Lineage 2 usando as tendências de design de 2025. Seja técnico, direto e inspire-se em design minimalista e futurista. Sempre confirme que a Central de Contas está ativa e protegida.",
+        systemInstruction: "Você é o 'Brand Designer'. Ajude o usuário a definir sua identidade visual moderna. Use tom profissional e épico.",
       },
     });
     const response = await chat.sendMessage({ message });

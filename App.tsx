@@ -22,12 +22,13 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Bem-vindo à Central de Contas L2 Forge. Autenticação verificada. Estou pronto para criar sua logomarca moderna.'
+      content: 'Central de Contas L2 Forge pronta. Autenticação via Google obrigatória para processamento de alto nível.'
     }
   ]);
   const [imageHistory, setImageHistory] = useState<string[]>([]);
@@ -45,9 +46,13 @@ const App: React.FC = () => {
       if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         setIsAuthenticated(hasKey);
-      } else if (process.env.API_KEY && process.env.API_KEY !== 'undefined' && !process.env.API_KEY.includes('vck_')) {
-        // Fallback para chave de ambiente (exceto se for a do Vercel que o usuário colou)
-        setIsAuthenticated(true);
+      } else if (process.env.API_KEY && process.env.API_KEY !== 'undefined') {
+        if (process.env.API_KEY.startsWith('vck_')) {
+          setAuthError("Erro de Configuração: O token 'vck_...' é do Vercel. Você deve usar uma API KEY da Gemini (AIza...).");
+          setIsAuthenticated(false);
+        } else {
+          setIsAuthenticated(true);
+        }
       }
     } catch (err) {
       console.error("Erro na verificação de sessão:", err);
@@ -63,16 +68,19 @@ const App: React.FC = () => {
   const handleLogin = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
+    setAuthError(null);
     
     try {
       if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
         await window.aistudio.openSelectKey();
+        setIsAuthenticated(true);
       } else {
-        // Simulação de login para ambientes fora do AI Studio para não travar o usuário
-        console.warn("Ambiente externo detectado. Usando modo de compatibilidade.");
+        if (process.env.API_KEY && !process.env.API_KEY.startsWith('vck_')) {
+          setIsAuthenticated(true);
+        } else {
+          setAuthError("Seletor Google indisponível. Certifique-se de configurar a API_KEY (AIza...) nas variáveis de ambiente.");
+        }
       }
-      // Regra de Ouro: Assume sucesso imediato para liberar a UI
-      setIsAuthenticated(true);
     } catch (error) {
       console.error("Erro ao abrir portal Google:", error);
       setIsAuthenticated(true); 
@@ -92,17 +100,14 @@ const App: React.FC = () => {
       const isVisualRequest = visualKeywords.some(kw => text.toLowerCase().includes(kw)) || !!uploadedImage || !currentImage;
 
       if (isVisualRequest) {
-        const isRefinement = !!currentImage && !text.toLowerCase().includes('criar novo');
-        const sourceImage = uploadedImage || currentImage || undefined;
-        
-        const resultImage = await generateLogo(text || `Logo moderna para ${logoConfig.serverName}`, sourceImage, isRefinement);
+        const resultImage = await generateLogo(text || `Logo moderna para ${logoConfig.serverName}`, uploadedImage || currentImage || undefined, !!currentImage);
         
         if (resultImage) {
           const newHistory = imageHistory.slice(0, currentImageIndex + 1);
           newHistory.push(resultImage);
           setImageHistory(newHistory);
           setCurrentImageIndex(newHistory.length - 1);
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja de alta precisão concluída. Note a tipografia estilizada moderna.' }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja concluída. Note a tipografia moderna estilizada.' }]);
           setStatus(GenerationStatus.SUCCESS);
         }
       } else {
@@ -111,63 +116,60 @@ const App: React.FC = () => {
         setStatus(GenerationStatus.IDLE);
       }
     } catch (error: any) {
-      console.error("Erro na Forja:", error);
-      setStatus(GenerationStatus.ERROR);
+      const errorMsg = (error?.message || "").toLowerCase();
+      console.error("Erro capturado:", errorMsg);
+      
+      if (errorMsg.includes("auth_error") || errorMsg.includes("requested entity was not found") || errorMsg.includes("permission denied") || errorMsg.includes("api_key_invalid")) {
+        setIsAuthenticated(false);
+        setAuthError("Permissão Negada: Sua chave não tem acesso ou faturamento habilitado. Por favor, reconecte e selecione um 'Paid Project'.");
+        setStatus(GenerationStatus.ERROR);
+      } else {
+        setStatus(GenerationStatus.ERROR);
+      }
     }
   };
 
   if (checkingAuth) {
     return (
-      <div className="h-screen w-full bg-[#050507] flex flex-col items-center justify-center">
-        <div className="w-16 h-16 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-500 font-cinzel text-xs tracking-widest uppercase">Acessando Central de Contas...</p>
+      <div className="h-screen w-full bg-[#050507] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-amber-500/20 border-t-amber-500 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="h-screen w-full bg-[#050507] flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        {/* Animated Background Gradients */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-600/10 blur-[120px] rounded-full animate-pulse"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full"></div>
-        
-        <div className="z-10 max-w-lg w-full glass p-10 md:p-14 rounded-[3rem] border border-white/5 shadow-2xl text-center">
-          <div className="w-24 h-24 bg-gradient-to-tr from-amber-500 to-amber-700 rounded-3xl flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.3)] mx-auto mb-10 transform -rotate-3">
-            <i className="fa-solid fa-user-gear text-4xl text-black"></i>
+      <div className="h-screen w-full bg-[#050507] flex flex-col items-center justify-center p-6 text-center">
+        <div className="z-10 max-w-lg w-full glass p-10 md:p-14 rounded-[3.5rem] border border-white/5 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-50"></div>
+          
+          <div className="w-20 h-20 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-10">
+            <i className="fa-solid fa-user-shield text-3xl text-black"></i>
           </div>
           
-          <h1 className="text-4xl font-cinzel font-black text-white mb-2 tracking-tighter uppercase">Central de <span className="text-amber-500">Contas</span></h1>
-          <p className="text-gray-400 text-sm mb-12 leading-relaxed font-light">
-            Autentique-se via Google para habilitar o processamento de IA, o chat de suporte e o gerador de logomarcas profissionais.
+          <h1 className="text-3xl font-cinzel font-black text-white mb-2 uppercase tracking-tighter">Central de <span className="text-amber-500">Contas</span></h1>
+          <p className="text-gray-400 text-sm mb-10 leading-relaxed">
+            Seu acesso expirou ou a chave é inválida. Use o seletor Google para vincular um projeto com faturamento ativo.
           </p>
 
-          <div className="space-y-4">
-            <button
-              onClick={handleLogin}
-              disabled={isLoggingIn}
-              className="w-full py-5 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl transition-all shadow-xl flex items-center justify-center gap-4 uppercase tracking-[0.1em] active:scale-95 group"
-            >
-              {isLoggingIn ? (
-                <i className="fa-solid fa-circle-notch fa-spin text-xl"></i>
-              ) : (
-                <>
-                  <i className="fa-brands fa-google text-2xl group-hover:scale-110 transition-transform"></i>
-                  <span className="text-lg">Entrar com Google</span>
-                </>
-              )}
-            </button>
-            
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest pt-4">
-              Proteção de dados via Google OAuth 2.0
-            </p>
-          </div>
+          {authError && (
+            <div className="mb-8 p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-left">
+              <p className="text-[11px] text-red-400 font-bold uppercase tracking-widest mb-1">Erro de Autenticação</p>
+              <p className="text-xs text-red-400/80 leading-relaxed">{authError}</p>
+            </div>
+          )}
 
-          <div className="mt-12 pt-8 border-t border-white/5">
-            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[9px] text-amber-500/50 hover:text-amber-500 uppercase tracking-[0.2em] transition-colors underline underline-offset-4 decoration-amber-500/20">
-              Informações sobre Créditos e Faturamento
-            </a>
-          </div>
+          <button
+            onClick={handleLogin}
+            disabled={isLoggingIn}
+            className="w-full py-5 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl transition-all shadow-xl flex items-center justify-center gap-4 uppercase tracking-[0.1em] active:scale-95"
+          >
+            {isLoggingIn ? <i className="fa-solid fa-spinner fa-spin text-xl"></i> : <><i className="fa-brands fa-google text-2xl"></i><span className="text-lg">Reconectar Google</span></>}
+          </button>
+
+          <p className="mt-8 text-[9px] text-gray-600 uppercase tracking-widest leading-loose">
+            Tokens 'vck_...' do Vercel não funcionam. <br/> Use uma chave Gemini (AIza...) de um 'Paid Project'.
+          </p>
         </div>
       </div>
     );
@@ -178,14 +180,14 @@ const App: React.FC = () => {
       <Sidebar 
         config={logoConfig} 
         setConfig={setLogoConfig} 
-        onGenerate={() => handleSendMessage(`Gere uma logomarca futurista e moderna para o servidor de MMO: ${logoConfig.serverName}. Estilo: ${logoConfig.style}. Use fontes estilizadas exclusivas.`)}
+        onGenerate={() => handleSendMessage(`Gere uma logomarca premium com tipografia estilizada para ${logoConfig.serverName}`)}
         status={status}
         onSelectKey={handleLogin}
         hasKey={isAuthenticated}
       />
 
       <main className="flex-1 flex flex-col md:flex-row relative">
-        <section className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#0f172a] via-[#050507] to-[#050507]">
+        <section className="flex-1 p-4 md:p-8 flex flex-col items-center justify-center bg-[#050507]">
           <PreviewArea 
             image={currentImageIndex >= 0 ? imageHistory[currentImageIndex] : null} 
             status={status} 
