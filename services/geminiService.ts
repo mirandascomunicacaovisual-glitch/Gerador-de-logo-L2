@@ -1,7 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Pool de modelos para imagem e chat
 const IMAGE_MODELS_POOL = [
   'gemini-2.5-flash-image',
   'gemini-3-pro-image-preview'
@@ -24,33 +23,13 @@ async function executeWithAutoRotation<T>(
   for (let i = 0; i < modelPool.length; i++) {
     const currentModel = modelPool[i];
     try {
-      console.log(`Tentando modelo: ${currentModel}`);
       return await fn(currentModel);
     } catch (error: any) {
       lastError = error;
       const message = (error?.message || "").toLowerCase();
-      
       console.warn(`Falha no modelo ${currentModel}:`, message);
 
-      // Se for erro de faturamento ou chave inválida explicitamente, paramos a rotação
-      if (
-        message.includes("api_key_invalid") || 
-        message.includes("401") || 
-        message.includes("unauthorized")
-      ) {
-        throw new Error(`AUTH_ERROR: Chave de API inválida ou não autorizada.`);
-      }
-
-      // Se for o último modelo e falhou, lançamos o erro final
-      if (i === modelPool.length - 1) {
-        // Se o erro contém "not found", tratamos como erro de permissão/acesso de conta
-        if (message.includes("not found") || message.includes("permission denied") || message.includes("403")) {
-          throw new Error(`AUTH_ERROR: ${error.message}`);
-        }
-        throw error;
-      }
-
-      // Espera curta e tenta o próximo modelo do pool
+      if (i === modelPool.length - 1) throw error;
       await sleep(1000);
       continue;
     }
@@ -60,17 +39,16 @@ async function executeWithAutoRotation<T>(
 
 export const generateLogo = async (prompt: string, baseImage?: string, isRefinement: boolean = false) => {
   return executeWithAutoRotation('image', async (modelId) => {
-    // Nova instância para garantir uso da chave mais recente
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ROLE: MASTER BRAND ARCHITECT.
-      OBJECTIVE: DESIGN A HIGH-END LOGO WITH STYLIZED TYPOGRAPHY.
-      STYLE: FUTURISTIC, 3D, LUXURY, MODERN.
-      RULE: THE NAME MUST BE ARTISTICALLY RENDERED, NOT A GENERIC FONT.
+      ROLE: MASTER BRAND ARCHITECT 2025.
+      OBJECTIVE: DESIGN A MODERN LOGO FOR L2 SERVERS.
+      STYLE: MINIMALIST, HIGH-END, STYLIZED TYPOGRAPHY.
+      MANDATORY: TEXT MUST BE ARTISTICALLY RENDERED.
     `;
 
-    const fullPrompt = `${systemPrompt}\n\nTASK: ${isRefinement ? 'Refine/Evolve this logo: ' : 'Create new stylized logo: '} ${prompt}.`;
+    const fullPrompt = `${systemPrompt}\n\nTASK: ${isRefinement ? 'Refine this logo: ' : 'Create new stylized logo: '} ${prompt}.`;
 
     const parts: any[] = [{ text: fullPrompt }];
     if (baseImage) {
@@ -86,7 +64,6 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
       imageConfig: { aspectRatio: "1:1" }
     };
     
-    // imageSize só é suportado no gemini-3-pro-image-preview
     if (modelId === 'gemini-3-pro-image-preview') {
       config.imageConfig.imageSize = "1K";
     }
@@ -97,19 +74,13 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
       config
     });
 
-    if (!response.candidates?.[0]?.content?.parts) {
-      throw new Error("A IA não retornou partes de conteúdo. Verifique os filtros de segurança.");
-    }
+    const candidate = response.candidates?.[0];
+    if (!candidate?.content?.parts) throw new Error("A API não retornou imagem. Verifique se o prompt é permitido.");
 
-    for (const part of response.candidates[0].content.parts) {
+    for (const part of candidate.content.parts) {
       if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
-      if (part.text && !baseImage) {
-        // Se o modelo só retornou texto em vez de imagem, forçamos erro para tentar próximo modelo
-        throw new Error("O modelo retornou apenas texto, tentando próximo modelo para imagem...");
-      }
     }
-    
-    throw new Error("Nenhuma imagem encontrada na resposta.");
+    throw new Error("Nenhuma imagem gerada. Tente descrever de outra forma.");
   });
 };
 
@@ -123,7 +94,7 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "Você é o especialista em Branding. Ajude o usuário a criar descrições épicas para logos de servidores.",
+        systemInstruction: "Você é o especialista em Branding L2 Forge. Ajude o usuário a definir sua logomarca.",
       },
     });
     const response = await chat.sendMessage({ message });

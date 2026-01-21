@@ -6,14 +6,10 @@ interface PreviewAreaProps {
   image: string | null;
   status: GenerationStatus;
   serverName: string;
-  onUndo?: () => void;
-  canUndo?: boolean;
-  onSelectKey?: () => void;
-  isRetrying?: boolean;
   detailedError?: string | null;
 }
 
-const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, onUndo, canUndo, onSelectKey, isRetrying, detailedError }) => {
+const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, detailedError }) => {
   return (
     <div className="w-full max-w-2xl aspect-square relative group">
       <div className="absolute -top-2 -left-2 w-12 h-12 border-t-2 border-l-2 border-amber-500/50 z-10"></div>
@@ -24,28 +20,18 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
       <div className="w-full h-full bg-black/40 border border-white/10 rounded-lg overflow-hidden flex items-center justify-center relative backdrop-blur-sm shadow-[0_0_50px_rgba(0,0,0,0.5)]">
         {status === GenerationStatus.ERROR ? (
           <div className="text-center p-8 animate-in fade-in zoom-in duration-300">
-            <div className="mb-6 relative">
+            <div className="mb-6">
               <i className="fa-solid fa-triangle-exclamation text-6xl text-amber-500"></i>
             </div>
             <h3 className="text-xl font-cinzel text-white mb-2 uppercase tracking-widest font-black">Falha na Forja</h3>
-            
-            <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 mb-8 max-w-sm mx-auto">
+            <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 mb-4 max-w-sm mx-auto">
               <p className="text-red-400 text-[11px] leading-relaxed font-mono break-words">
-                {detailedError || "Ocorreu um erro inesperado na comunicação com a IA."}
+                {detailedError || "Ocorreu um erro na comunicação com a API."}
               </p>
             </div>
-
-            <div className="flex flex-col gap-3">
-              {onSelectKey && (
-                <button 
-                  onClick={onSelectKey}
-                  className="px-8 py-4 bg-amber-500 text-black font-black rounded-xl uppercase tracking-widest text-xs hover:bg-amber-400 transition-all shadow-lg flex items-center gap-3 mx-auto"
-                >
-                  <i className="fa-brands fa-google"></i>
-                  Vincular Conta Paga
-                </button>
-              )}
-            </div>
+            <p className="text-gray-500 text-[10px] uppercase tracking-widest">
+              Verifique a configuração da API_KEY no servidor.
+            </p>
           </div>
         ) : image ? (
           <img 
@@ -62,7 +48,7 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
               {serverName || 'Aguardando Forja'}
             </h2>
             <p className="mt-4 text-gray-500 font-light tracking-widest uppercase text-[10px]">
-              Configure os detalhes e clique em 'Forjar Logomarca'
+              Configure o nome e clique no botão dourado
             </p>
           </div>
         )}
@@ -75,9 +61,8 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
               <i className="fa-solid fa-hammer absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xl text-amber-500"></i>
             </div>
             <p className="text-amber-500 font-cinzel text-lg animate-pulse tracking-widest uppercase font-black">
-              Sincronizando Modelos...
+              Processando Arte...
             </p>
-            <p className="text-white/20 text-[9px] uppercase mt-2 tracking-widest">Tentando modelos disponíveis no pool</p>
           </div>
         )}
       </div>
