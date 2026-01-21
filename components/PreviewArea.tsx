@@ -28,22 +28,21 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
               <i className="fa-solid fa-triangle-exclamation text-6xl text-amber-500 animate-pulse"></i>
               <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-[#050507]"></div>
             </div>
-            <h3 className="text-xl font-cinzel text-white mb-2 uppercase tracking-widest font-black">Limite Atingido</h3>
+            <h3 className="text-xl font-cinzel text-white mb-2 uppercase tracking-widest font-black">Conexão Necessária</h3>
             <p className="text-gray-400 text-sm mb-8 max-w-sm mx-auto leading-relaxed">
-              O Google atingiu o limite de requisições gratuitas. Para continuar forjando com <span className="text-amber-500 font-bold">Gemini 3 Pro</span> e fontes personalizadas, ative sua conta Google.
+              Para continuar forjando logomarcas com <span className="text-amber-500 font-bold">fontes estilizadas</span> e alta resolução, por favor autentique seu acesso.
             </p>
             {onSelectKey && (
               <button 
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   onSelectKey();
                 }}
                 className="px-10 py-5 bg-amber-500 text-black font-black rounded-2xl uppercase tracking-[0.15em] text-sm hover:bg-amber-400 transition-all shadow-[0_20px_50px_rgba(245,158,11,0.4)] flex items-center gap-4 mx-auto active:scale-95 group"
               >
                 <i className="fa-brands fa-google text-xl group-hover:rotate-12 transition-transform"></i>
-                Ativar Conta Google
+                Ativar com Google
               </button>
             )}
           </div>
@@ -77,7 +76,7 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
             <p className="text-amber-500 font-cinzel text-xl animate-pulse tracking-[0.2em] uppercase font-black text-center px-4">
               {isRetrying ? 'Sincronizando Canais...' : 'Forjando Tipografia Estilizada...'}
             </p>
-            <p className="text-white/30 text-[10px] uppercase mt-2 tracking-widest">Renderização 3D em Alta Fidelidade</p>
+            <p className="text-white/30 text-[10px] uppercase mt-2 tracking-widest">Renderização 3D Premium</p>
           </div>
         )}
       </div>

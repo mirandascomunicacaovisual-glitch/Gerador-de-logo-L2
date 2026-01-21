@@ -47,10 +47,11 @@ const App: React.FC = () => {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         setIsAuthenticated(hasKey);
       } else if (process.env.API_KEY && process.env.API_KEY !== 'undefined') {
+        // Se houver uma chave injetada no ambiente, autentica automaticamente
         setIsAuthenticated(true);
       }
     } catch (err) {
-      console.error("Auth check error:", err);
+      console.error("Erro na verificação de autenticação:", err);
     } finally {
       setCheckingAuth(false);
     }
@@ -64,26 +65,21 @@ const App: React.FC = () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     
-    // Resetar o status de erro imediatamente para permitir nova tentativa
-    if (status === GenerationStatus.ERROR) {
-      setStatus(GenerationStatus.IDLE);
-    }
-
     try {
-      // Tenta abrir a janela oficial de seleção de conta/chave do Google
+      // Tenta abrir o seletor oficial de contas/chaves do Google AI Studio
       if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
         await window.aistudio.openSelectKey();
       } else {
-        // Fallback: Se não houver aistudio (ex: mobile ou fora do frame), 
-        // abrimos a documentação de faturamento para o usuário entender o requisito
-        window.open("https://ai.google.dev/gemini-api/docs/billing", "_blank");
+        console.warn("API de Login do Google não detectada. Tentando prosseguir com as credenciais disponíveis.");
       }
       
-      // Regra obrigatória: Assumir sucesso após disparar o seletor para evitar race condition
+      // REGRA DE OURO: Assume sucesso imediato para evitar race conditions e permitir que o usuário use o app
       setIsAuthenticated(true);
+      setStatus(GenerationStatus.IDLE);
     } catch (error) {
-      console.error("Erro ao abrir login Google:", error);
-      setIsAuthenticated(true); 
+      console.error("Erro ao disparar login Google:", error);
+      // Fallback: mesmo com erro, tentamos liberar o acesso para o usuário
+      setIsAuthenticated(true);
     } finally {
       setIsLoggingIn(false);
     }
@@ -123,7 +119,7 @@ const App: React.FC = () => {
         const sourceImage = uploadedImage || currentImage || undefined;
         
         const prompt = isRefinement 
-          ? `Refine this logo: ${text}. Focus on stylized 3D typography for "${logoConfig.serverName}". Ensure high-fidelity 2025 modern gaming aesthetics.`
+          ? `Refine this logo: ${text}. Focus on highly stylized 3D typography for the name "${logoConfig.serverName}".`
           : `Create a professional 3D MMORPG logo for a server named "${logoConfig.serverName}". Style: ${logoConfig.style}. Use CUSTOM STYLIZED ARTISTIC FONTS. Prompt: ${text}`;
         
         const resultImage = await generateLogo(prompt, sourceImage, isRefinement);
@@ -133,7 +129,7 @@ const App: React.FC = () => {
           newHistory.push(resultImage);
           setImageHistory(newHistory);
           setCurrentImageIndex(newHistory.length - 1);
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja concluída! Sua marca foi gerada com tipografia estilizada e renderização 3D de alta performance.' }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja concluída! Tipografia moderna e renderização cinematográfica aplicadas.' }]);
           setStatus(GenerationStatus.SUCCESS);
         }
       } else {
@@ -145,6 +141,7 @@ const App: React.FC = () => {
       console.error("Erro na Forja:", error);
       const errorMessage = error?.message || "";
       
+      // Se houver erro de chave, forçamos o login novamente
       if (errorMessage.includes("Requested entity was not found") || errorMessage.includes("API_KEY_INVALID")) {
         setIsAuthenticated(false);
       }
@@ -161,7 +158,7 @@ const App: React.FC = () => {
 
   const handleQuickGenerate = () => {
     if (!logoConfig.serverName) return alert("Por favor, digite o nome do servidor antes de forjar.");
-    handleSendMessage(`Forje uma logomarca 3D épica e luxuosa para o servidor ${logoConfig.serverName}. Use fontes extremamente estilizadas e renderização moderna de 2025.`);
+    handleSendMessage(`Forje uma logomarca 3D épica para o servidor ${logoConfig.serverName}. Use fontes extremamente estilizadas e renderização de alta fidelidade.`);
   };
 
   if (checkingAuth) {
@@ -170,7 +167,7 @@ const App: React.FC = () => {
         <div className="text-amber-500 animate-spin text-5xl mb-4">
           <i className="fa-solid fa-fire-flame-curved"></i>
         </div>
-        <p className="text-amber-500/50 font-cinzel tracking-widest text-sm animate-pulse uppercase">Conectando ao Núcleo de Design...</p>
+        <p className="text-amber-500/50 font-cinzel tracking-widest text-sm animate-pulse uppercase">Conectando ao Estúdio...</p>
       </div>
     );
   }
@@ -187,7 +184,7 @@ const App: React.FC = () => {
           
           <h1 className="text-4xl font-cinzel font-black tracking-tighter text-white mb-4 uppercase">L2 LOGO <span className="text-amber-500">FORGE</span></h1>
           <p className="text-gray-400 font-light mb-10 leading-relaxed text-base px-6">
-            Logomarcas de servidores modernas com fontes estilizadas de elite. Ative sua conta Google para começar a forjar agora.
+            Logomarcas de servidores modernas com fontes estilizadas. Conecte sua conta Google para liberar o poder do Gemini 3 Pro.
           </p>
 
           <button
@@ -205,14 +202,9 @@ const App: React.FC = () => {
             )}
           </button>
 
-          <div className="space-y-4">
-            <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
-              <i className="fa-solid fa-shield-halved text-amber-500/40"></i>
-              Autenticação Segura Google
-            </div>
-            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[9px] text-amber-500/40 hover:text-amber-500 transition-colors uppercase tracking-widest border-b border-white/5 pb-1">
-              Saiba mais sobre a ativação e faturamento
-            </a>
+          <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
+            <i className="fa-solid fa-shield-halved text-amber-500/40"></i>
+            Conexão Segura e Direta
           </div>
         </div>
       </div>
