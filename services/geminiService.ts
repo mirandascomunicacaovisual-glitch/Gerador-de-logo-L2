@@ -1,16 +1,15 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Modelos recomendados para geração de imagem e chat
+// Pool de modelos para resiliência
 const IMAGE_MODELS_POOL = [
-  'gemini-2.5-flash-image',
-  'gemini-3-pro-image-preview'
+  'gemini-3-pro-image-preview', // Preferencial para alta fidelidade e tipografia
+  'gemini-2.5-flash-image'
 ];
 
 const CHAT_MODELS_POOL = [
-  'gemini-3-flash-preview',
   'gemini-3-pro-preview',
-  'gemini-flash-lite-latest'
+  'gemini-3-flash-preview'
 ];
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -33,13 +32,14 @@ async function executeWithAutoRotation<T>(
       lastError = error;
       const message = error?.message || "";
       
-      if (message.includes("Requested entity was not found") || message.includes("API_KEY_INVALID") || message.includes("401") || message.includes("403")) {
+      // Se for erro de autenticação ou chave, não rotacionamos, paramos aqui
+      if (message.includes("Requested entity was not found") || message.includes("API_KEY_INVALID")) {
         throw error;
       }
 
       const isQuotaError = message.includes("429") || message.includes("RESOURCE_EXHAUSTED") || message.includes("quota");
       if (isQuotaError && attempt < maxRetries - 1) {
-        await sleep(Math.pow(2, attempt) * 1000);
+        await sleep(1500);
         continue;
       }
       throw error;
@@ -48,36 +48,26 @@ async function executeWithAutoRotation<T>(
   throw lastError;
 }
 
-const handleApiError = (error: any) => {
-  const message = error?.message || "";
-  if (message.includes("429") || message.includes("RESOURCE_EXHAUSTED")) {
-    throw new Error("QUOTA_EXCEEDED");
-  }
-  throw error;
-};
-
 export const generateLogo = async (prompt: string, baseImage?: string, isRefinement: boolean = false) => {
-  return executeWithAutoRotation('image', async (modelId, isOptimized) => {
-    // Nova instância para garantir o uso da chave mais recente do usuário (process.env.API_KEY)
+  return executeWithAutoRotation('image', async (modelId) => {
+    // Inicialização obrigatória com process.env.API_KEY injetado pelo sistema
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ROLE: MASTER BRAND DESIGNER FOR TOP-TIER MODERN MMORPG SERVERS (2025 PREMIUM STYLE).
-      MISSION: ARCHITECT A MAGNIFICENT 3D LOGO WITH EXTREMELY STYLIZED ARTISTIC TYPOGRAPHY.
+      ROLE: ELITE MMORPG BRAND ARCHITECT.
+      OBJECTIVE: DESIGN A MODERN, CURRENT, AND PRESTIGIOUS 3D LOGO.
       
-      CRITICAL DESIGN DIRECTIVES:
-      - TYPOGRAPHY: STRICTLY FORBIDDEN TO USE STANDARD SYSTEM FONTS. ALL LETTERING FOR THE SERVER NAME MUST BE CUSTOM-ARTISTIC, STYLIZED, AND 3D.
-      - FONT ARCHITECTURE: LETTERS MUST FEATURE LUXURY METAL BEVELS (CHROME, GOLD, POLISHED STEEL), CRYSTALLINE DEPTH, OR VOLUMETRIC GLOW.
-      - VISUAL FIDELITY: UNREAL ENGINE 5 CINEMATIC QUALITY, 8K RESOLUTION, SHARP RAY-TRACED REFLECTIONS, AMBIENT OCCLUSION.
-      - AESTHETIC: MODERN, CLEAN, AGGRESSIVE, AND MAJESTIC. PROFESSIONAL GAMING BRANDING AT ITS HIGHEST LEVEL.
-      - COMPOSITION: CENTERED ON A DEEP DARK BACKGROUND WITH ATMOSPHERIC FOG OR PARTICLES.
+      STYLE RULES:
+      - TYPOGRAPHY: USE EXTREMELY STYLIZED ARTISTIC FONTS. DO NOT USE GENERIC SYSTEM FONTS.
+      - VISUALS: HIGH-END 3D RENDERING, METALLIC MATERIALS (GOLD, SILVER, CHROME), NEON ACCENTS, OR CRYSTALLINE TEXTURES.
+      - QUALITY: CINEMATIC LIGHTING, VOLUMETRIC SHADOWS, 8K RESOLUTION DETAIL.
+      - BACKGROUND: CLEAN, MINIMALIST DARK BACKGROUND TO MAKE THE LOGO POP.
+      - NO GENERIC CLIPART. EVERYTHING MUST LOOK CUSTOM-MADE FOR A MULTI-MILLION DOLLAR PROJECT.
     `;
 
-    const instruction = isRefinement 
-      ? `UPDATING BRAND ARTWORK: ${prompt}. Elevate the stylized 3D typography and cinematic render quality.` 
-      : `FORGING NEW BRAND IDENTITY: ${prompt}. Design a unique artistic 3D font for the server name. It must look like a multi-million dollar server logo.`;
+    const fullPrompt = `${systemPrompt}\n\nTASK: ${isRefinement ? 'Refine and improve this existing logo based on: ' : 'Create a brand new logo based on: '} ${prompt}. Ensure the server name is written in a highly stylized, 3D modern font.`;
 
-    const parts: any[] = [{ text: `${systemPrompt}\n${instruction}` }];
+    const parts: any[] = [{ text: fullPrompt }];
 
     if (baseImage) {
       parts.push({
@@ -93,7 +83,7 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
     };
 
     if (modelId === 'gemini-3-pro-image-preview') {
-      imageConfig.imageSize = "1K";
+      imageConfig.imageSize = "1K"; // Suporte a alta resolução
     }
 
     const response = await ai.models.generateContent({
@@ -109,27 +99,26 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
         return `data:image/png;base64,${part.inlineData.data}`;
       }
     }
-    throw new Error("Empty Response");
-  }).catch(handleApiError);
+    throw new Error("No image data returned from API.");
+  });
 };
 
 export const chatWithAI = async (message: string, history: { role: 'user' | 'assistant', content: string }[]) => {
-  return executeWithAutoRotation('chat', async (modelId, isOptimized) => {
+  return executeWithAutoRotation('chat', async (modelId) => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const relevantHistory = isOptimized ? history.slice(-4) : history;
-
+    
     const chat = ai.chats.create({
       model: modelId,
-      history: relevantHistory.map(h => ({
+      history: history.map(h => ({
         role: h.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "Você é o 'Arquiteto de Marcas da Forja'. Seja épico, técnico e visionário. Recomende sempre tipografias 3D artísticas e efeitos visuais de última geração para servidores de elite.",
+        systemInstruction: "Você é o 'Arquiteto de Marcas'. Ajude o usuário a criar o conceito visual de seu servidor de Lineage 2. Fale de forma épica, técnica e sempre recomende tipografias 3D estilizadas e modernas. Explique que o login Google é para identificação e os créditos são do projeto.",
       },
     });
 
     const response = await chat.sendMessage({ message });
     return response.text;
-  }).catch(handleApiError);
+  });
 };
