@@ -63,15 +63,15 @@ const App: React.FC = () => {
   const handleLogin = async () => {
     setIsLoggingIn(true);
     try {
-      // Inicia o fluxo oficial de login do Google
-      if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      // Tenta abrir o seletor oficial de chaves do Google
+      if (window.aistudio) {
         await window.aistudio.openSelectKey();
       }
-      // Regra obrigatória: Assumir sucesso após disparar o seletor para evitar race condition
+      // Regra de ouro: Assumir sucesso após disparar o seletor para evitar race condition
       setIsAuthenticated(true);
     } catch (error) {
-      console.error("Erro ao abrir seletor:", error);
-      // Fallback para não travar o usuário
+      console.error("Erro ao abrir login Google:", error);
+      // Fallback para permitir que o usuário use o app caso a chave já esteja injetada
       setIsAuthenticated(true);
     } finally {
       setIsLoggingIn(false);
@@ -113,7 +113,7 @@ const App: React.FC = () => {
         
         const prompt = isRefinement 
           ? `Refine this logo: ${text}. Focus on the server name "${logoConfig.serverName}" using modern stylized 3D typography. Style: ${logoConfig.style}.`
-          : `Create a professional 3D MMORPG logo for a server named "${logoConfig.serverName}". Style: ${logoConfig.style}, Color: ${logoConfig.colorScheme}, Symbol: ${logoConfig.symbol}. Use HIGHLY STYLIZED FONT. Prompt details: ${text}`;
+          : `Create a professional 3D MMORPG logo for a server named "${logoConfig.serverName}". Style: ${logoConfig.style}, Color: ${logoConfig.colorScheme}, Symbol: ${logoConfig.symbol}. Use HIGHLY STYLIZED CUSTOM FONT. Prompt details: ${text}`;
         
         const resultImage = await generateLogo(prompt, sourceImage, isRefinement);
         
@@ -122,7 +122,7 @@ const App: React.FC = () => {
           newHistory.push(resultImage);
           setImageHistory(newHistory);
           setCurrentImageIndex(newHistory.length - 1);
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'A forja foi concluída. Sua logomarca moderna com fontes estilizadas e renderização 3D está pronta.' }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja concluída! Sua nova marca moderna está pronta.' }]);
           setStatus(GenerationStatus.SUCCESS);
         }
       } else {
@@ -153,7 +153,7 @@ const App: React.FC = () => {
 
   const handleQuickGenerate = () => {
     if (!logoConfig.serverName) return alert("Por favor, digite o nome do servidor antes de forjar.");
-    handleSendMessage(`Forje uma logomarca 3D épica e moderna para o servidor ${logoConfig.serverName}. Use fontes extremamente estilizadas e o estilo ${logoConfig.style}.`);
+    handleSendMessage(`Forje uma logomarca 3D épica e moderna para o servidor ${logoConfig.serverName}. Use fontes extremamente estilizadas.`);
   };
 
   if (checkingAuth) {
@@ -170,17 +170,16 @@ const App: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <div className="h-screen w-full bg-[#050507] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-        {/* Camada Visual Premium */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-600/10 via-transparent to-transparent opacity-60"></div>
         
         <div className="z-10 max-w-lg glass p-10 rounded-[2.5rem] border border-white/5 shadow-[0_0_120px_rgba(245,158,11,0.08)]">
-          <div className="w-20 h-20 bg-amber-500 rounded-3xl flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.4)] mx-auto mb-10 transform hover:rotate-12 transition-transform">
+          <div className="w-20 h-20 bg-amber-500 rounded-3xl flex items-center justify-center shadow-[0_20px_50px_rgba(245,158,11,0.4)] mx-auto mb-10 transition-transform hover:scale-105">
             <i className="fa-solid fa-fire-flame-curved text-4xl text-black"></i>
           </div>
           
           <h1 className="text-4xl font-cinzel font-black tracking-tighter text-white mb-4 uppercase">L2 LOGO <span className="text-amber-500">FORGE</span></h1>
           <p className="text-gray-400 font-light mb-10 leading-relaxed text-base px-6">
-            Logomarcas de servidores modernas com fontes estilizadas e renderização 3D. Conecte sua conta Google para começar.
+            Gere logomarcas profissionais com fontes estilizadas e renderização 3D. Clique abaixo para entrar com sua conta Google.
           </p>
 
           <button
@@ -201,7 +200,7 @@ const App: React.FC = () => {
           <div className="space-y-4">
             <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
               <i className="fa-solid fa-shield-halved text-amber-500/40"></i>
-              Acesso Profissional via Google Cloud
+              Autenticação Segura via Google Console
             </div>
             
             <a 
@@ -210,7 +209,7 @@ const App: React.FC = () => {
               rel="noopener noreferrer"
               className="inline-block text-[9px] text-amber-500/30 hover:text-amber-500 transition-colors uppercase tracking-widest border-b border-white/5 pb-1"
             >
-              Consultar documentação de faturamento
+              Documentação de Cobrança e API
             </a>
           </div>
         </div>
