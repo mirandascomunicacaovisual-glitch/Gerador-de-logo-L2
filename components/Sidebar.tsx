@@ -7,9 +7,11 @@ interface SidebarProps {
   setConfig: React.Dispatch<React.SetStateAction<LogoConfig>>;
   onGenerate: () => void;
   status: GenerationStatus;
+  onSelectKey?: () => void;
+  hasKey?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGenerate, status }) => {
+const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGenerate, status, onSelectKey, hasKey }) => {
   return (
     <aside className="w-80 h-full glass border-r border-white/10 p-6 hidden lg:flex flex-col gap-6 overflow-y-auto">
       <div className="flex items-center gap-4 mb-2">
@@ -22,10 +24,37 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGenerate, status
         </div>
       </div>
 
+      {/* Central de Contas Dashboard */}
+      <div className="bg-white/5 border border-white/10 rounded-[1.5rem] p-5 shadow-inner">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Central de Contas</span>
+          <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+        </div>
+        
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+            <i className="fa-solid fa-user-shield text-amber-500"></i>
+          </div>
+          <div className="overflow-hidden">
+            <p className="text-xs text-white font-bold truncate">Sessão Ativa</p>
+            <p className="text-[10px] text-gray-500 truncate">Google Authenticated</p>
+          </div>
+        </div>
+        
+        <div className="pt-3 border-t border-white/5 flex gap-2">
+          <button 
+            onClick={onSelectKey}
+            className="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-[9px] text-gray-400 font-bold uppercase tracking-widest border border-white/5 transition-all"
+          >
+            Mudar Conta
+          </button>
+        </div>
+      </div>
+
       <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl">
         <p className="text-[9px] text-amber-500/80 leading-relaxed uppercase tracking-widest font-bold">
           <i className="fa-solid fa-bolt mr-1"></i>
-          SISTEMA ATIVO: Logomarcas modernas com fontes estilizadas e renderização 3D.
+          Créditos: Projeto Corporativo. O uso não consome saldo da sua conta pessoal.
         </p>
       </div>
 
@@ -39,20 +68,6 @@ const Sidebar: React.FC<SidebarProps> = ({ config, setConfig, onGenerate, status
             placeholder="Ex: L2 LEGACY..."
             className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-amber-500/50 transition-all font-cinzel text-lg shadow-inner placeholder:text-gray-700"
           />
-        </div>
-
-        <div>
-          <label className="block text-[10px] font-black text-gray-500 uppercase mb-3 tracking-[0.2em]">Esquema de Cores</label>
-          <select 
-            value={config.colorScheme}
-            onChange={(e) => setConfig({...config, colorScheme: e.target.value})}
-            className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-gray-300 focus:outline-none focus:border-amber-500/50"
-          >
-            <option>Titanium & Gold</option>
-            <option>Neon Blue & Silver</option>
-            <option>Blood Red & Carbon</option>
-            <option>Emerald & White</option>
-          </select>
         </div>
 
         <div>

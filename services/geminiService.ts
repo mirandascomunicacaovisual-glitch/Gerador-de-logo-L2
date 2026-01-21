@@ -1,8 +1,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Priorizamos o 2.5-flash-image por ser mais compatível com chaves gratuitas/padrão.
-// O 3-pro-image-preview é deixado como segunda opção ou para casos específicos.
+// Pool de modelos para imagem e chat
 const IMAGE_MODELS_POOL = [
   'gemini-2.5-flash-image',
   'gemini-3-pro-image-preview'
@@ -17,37 +16,43 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function executeWithAutoRotation<T>(
   taskType: 'image' | 'chat',
-  fn: (modelId: string) => Promise<T>,
-  maxRetries = 2
+  fn: (modelId: string) => Promise<T>
 ): Promise<T> {
   const modelPool = taskType === 'image' ? IMAGE_MODELS_POOL : CHAT_MODELS_POOL;
   let lastError: any;
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const currentModel = modelPool[attempt] || modelPool[modelPool.length - 1];
+  for (let i = 0; i < modelPool.length; i++) {
+    const currentModel = modelPool[i];
     try {
+      console.log(`Tentando modelo: ${currentModel}`);
       return await fn(currentModel);
     } catch (error: any) {
       lastError = error;
       const message = (error?.message || "").toLowerCase();
       
-      // Detecção de erros de autenticação/permissão críticos
+      console.warn(`Falha no modelo ${currentModel}:`, message);
+
+      // Se for erro de faturamento ou chave inválida explicitamente, paramos a rotação
       if (
-        message.includes("requested entity was not found") || 
         message.includes("api_key_invalid") || 
-        message.includes("permission denied") || 
         message.includes("401") || 
-        message.includes("403")
+        message.includes("unauthorized")
       ) {
-        throw new Error(`AUTH_ERROR: ${error.message}`);
+        throw new Error(`AUTH_ERROR: Chave de API inválida ou não autorizada.`);
       }
-      
-      // Rotação para o próximo modelo em caso de quota ou erro temporário
-      if ((message.includes("429") || message.includes("quota")) && attempt < maxRetries - 1) {
-        await sleep(1500);
-        continue;
+
+      // Se for o último modelo e falhou, lançamos o erro final
+      if (i === modelPool.length - 1) {
+        // Se o erro contém "not found", tratamos como erro de permissão/acesso de conta
+        if (message.includes("not found") || message.includes("permission denied") || message.includes("403")) {
+          throw new Error(`AUTH_ERROR: ${error.message}`);
+        }
+        throw error;
       }
-      throw error;
+
+      // Espera curta e tenta o próximo modelo do pool
+      await sleep(1000);
+      continue;
     }
   }
   throw lastError;
@@ -55,16 +60,17 @@ async function executeWithAutoRotation<T>(
 
 export const generateLogo = async (prompt: string, baseImage?: string, isRefinement: boolean = false) => {
   return executeWithAutoRotation('image', async (modelId) => {
+    // Nova instância para garantir uso da chave mais recente
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ROLE: MASTER BRAND ARCHITECT 2025.
-      OBJECTIVE: DESIGN A MODERN, CUTTING-EDGE LOGO FOR L2 SERVERS.
-      STYLE: MINIMALIST, HIGH-END, STYLIZED TYPOGRAPHY, 3D GEOMETRIC ELEMENTS.
-      MANDATORY: NO GENERIC FONTS. THE TEXT MUST BE ARTISTICALLY STYLIZED AND FUTURISTIC.
+      ROLE: MASTER BRAND ARCHITECT.
+      OBJECTIVE: DESIGN A HIGH-END LOGO WITH STYLIZED TYPOGRAPHY.
+      STYLE: FUTURISTIC, 3D, LUXURY, MODERN.
+      RULE: THE NAME MUST BE ARTISTICALLY RENDERED, NOT A GENERIC FONT.
     `;
 
-    const fullPrompt = `${systemPrompt}\n\nTASK: ${isRefinement ? 'Refine this existing logo to be ultra-modern: ' : 'Create a brand new futuristic logo: '} ${prompt}. THE NAME MUST BE STYLIZED.`;
+    const fullPrompt = `${systemPrompt}\n\nTASK: ${isRefinement ? 'Refine/Evolve this logo: ' : 'Create new stylized logo: '} ${prompt}.`;
 
     const parts: any[] = [{ text: fullPrompt }];
     if (baseImage) {
@@ -76,11 +82,13 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
       });
     }
 
-    const config: any = {};
-    if (modelId.includes('gemini-3')) {
-      config.imageConfig = { aspectRatio: "1:1", imageSize: "1K" };
-    } else {
-      config.imageConfig = { aspectRatio: "1:1" };
+    const config: any = {
+      imageConfig: { aspectRatio: "1:1" }
+    };
+    
+    // imageSize só é suportado no gemini-3-pro-image-preview
+    if (modelId === 'gemini-3-pro-image-preview') {
+      config.imageConfig.imageSize = "1K";
     }
 
     const response = await ai.models.generateContent({
@@ -89,10 +97,19 @@ export const generateLogo = async (prompt: string, baseImage?: string, isRefinem
       config
     });
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+    if (!response.candidates?.[0]?.content?.parts) {
+      throw new Error("A IA não retornou partes de conteúdo. Verifique os filtros de segurança.");
     }
-    throw new Error("API returned no image data.");
+
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+      if (part.text && !baseImage) {
+        // Se o modelo só retornou texto em vez de imagem, forçamos erro para tentar próximo modelo
+        throw new Error("O modelo retornou apenas texto, tentando próximo modelo para imagem...");
+      }
+    }
+    
+    throw new Error("Nenhuma imagem encontrada na resposta.");
   });
 };
 
@@ -106,7 +123,7 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "Você é o 'Brand Designer'. Ajude o usuário a definir sua identidade visual moderna. Use tom profissional e épico.",
+        systemInstruction: "Você é o especialista em Branding. Ajude o usuário a criar descrições épicas para logos de servidores.",
       },
     });
     const response = await chat.sendMessage({ message });
