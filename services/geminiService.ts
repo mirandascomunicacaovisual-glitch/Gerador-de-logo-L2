@@ -58,25 +58,24 @@ const handleApiError = (error: any) => {
 
 export const generateLogo = async (prompt: string, baseImage?: string, isRefinement: boolean = false) => {
   return executeWithAutoRotation('image', async (modelId, isOptimized) => {
-    // Nova instância para garantir o uso da chave mais recente do usuário
+    // Nova instância para garantir o uso da chave mais recente do usuário (process.env.API_KEY)
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ROLE: ELITE BRAND ARCHITECT FOR HIGH-END GAMING SERVERS (YEAR 2025 STYLE).
-      MISSION: CREATE A STUNNING 3D LOGO WITH ARTISTIC CUSTOM STYLIZED TYPOGRAPHY.
+      ROLE: MASTER BRAND DESIGNER FOR TOP-TIER MODERN MMORPG SERVERS (2025 PREMIUM STYLE).
+      MISSION: ARCHITECT A MAGNIFICENT 3D LOGO WITH EXTREMELY STYLIZED ARTISTIC TYPOGRAPHY.
       
-      MANDATORY RULES:
-      - TYPOGRAPHY: NEVER USE SYSTEM OR GENERIC FONTS (NO ARIAL, NO TIMES, NO BASIC SERIF). 
-      - FONT DESIGN: ALL LETTERS MUST BE CUSTOM-DRAWN, STYLIZED, ARTISTIC, AND 3D.
-      - VISUAL EFFECTS: LETTERS MUST HAVE METALLIC BEVELS (CHROME, GOLD, OBSIDIAN), VOLUMETRIC GLOW, AND DEPTH.
-      - RENDER QUALITY: UNREAL ENGINE 5 CINEMATIC STYLE, 8K RESOLUTION, RAY-TRACED REFLECTIONS.
-      - AESTHETIC: MODERN, AGGRESSIVE, AND CLEAN. PROFESSIONAL MMORPG BRANDING.
-      - BACKGROUND: CLEAN DARK BACKGROUND TO HIGHLIGHT THE BRANDING.
+      CRITICAL DESIGN DIRECTIVES:
+      - TYPOGRAPHY: STRICTLY FORBIDDEN TO USE STANDARD SYSTEM FONTS. ALL LETTERING FOR THE SERVER NAME MUST BE CUSTOM-ARTISTIC, STYLIZED, AND 3D.
+      - FONT ARCHITECTURE: LETTERS MUST FEATURE LUXURY METAL BEVELS (CHROME, GOLD, POLISHED STEEL), CRYSTALLINE DEPTH, OR VOLUMETRIC GLOW.
+      - VISUAL FIDELITY: UNREAL ENGINE 5 CINEMATIC QUALITY, 8K RESOLUTION, SHARP RAY-TRACED REFLECTIONS, AMBIENT OCCLUSION.
+      - AESTHETIC: MODERN, CLEAN, AGGRESSIVE, AND MAJESTIC. PROFESSIONAL GAMING BRANDING AT ITS HIGHEST LEVEL.
+      - COMPOSITION: CENTERED ON A DEEP DARK BACKGROUND WITH ATMOSPHERIC FOG OR PARTICLES.
     `;
 
     const instruction = isRefinement 
-      ? `UPDATING LOGO: ${prompt}. Focus on stylized 3D typography and premium gaming render.` 
-      : `FORGING NEW IDENTITY: ${prompt}. Use a unique artistic font for the server name. Must look like a top-tier modern server logo.`;
+      ? `UPDATING BRAND ARTWORK: ${prompt}. Elevate the stylized 3D typography and cinematic render quality.` 
+      : `FORGING NEW BRAND IDENTITY: ${prompt}. Design a unique artistic 3D font for the server name. It must look like a multi-million dollar server logo.`;
 
     const parts: any[] = [{ text: `${systemPrompt}\n${instruction}` }];
 
@@ -126,7 +125,7 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "Você é o 'Diretor de Marca da Forja'. Seja épico, técnico e focado em design moderno. Recomende sempre fontes estilizadas personalizadas e efeitos 3D profissionais para logomarcas de elite.",
+        systemInstruction: "Você é o 'Arquiteto de Marcas da Forja'. Seja épico, técnico e visionário. Recomende sempre tipografias 3D artísticas e efeitos visuais de última geração para servidores de elite.",
       },
     });
 

@@ -61,24 +61,28 @@ const App: React.FC = () => {
   }, [checkAuthStatus]);
 
   const handleLogin = async () => {
+    if (isLoggingIn) return;
     setIsLoggingIn(true);
-    // Limpa o status de erro imediatamente para dar feedback visual
+    
+    // Resetar o status de erro imediatamente para permitir nova tentativa
     if (status === GenerationStatus.ERROR) {
       setStatus(GenerationStatus.IDLE);
     }
 
     try {
-      // Tenta abrir o seletor oficial do Google AI Studio
+      // Tenta abrir a janela oficial de seleção de conta/chave do Google
       if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
         await window.aistudio.openSelectKey();
       } else {
-        console.log("Ambiente padrão detectado. Prosseguindo com autenticação de sessão.");
+        // Fallback: Se não houver aistudio (ex: mobile ou fora do frame), 
+        // abrimos a documentação de faturamento para o usuário entender o requisito
+        window.open("https://ai.google.dev/gemini-api/docs/billing", "_blank");
       }
       
       // Regra obrigatória: Assumir sucesso após disparar o seletor para evitar race condition
       setIsAuthenticated(true);
     } catch (error) {
-      console.error("Erro no fluxo de login:", error);
+      console.error("Erro ao abrir login Google:", error);
       setIsAuthenticated(true); 
     } finally {
       setIsLoggingIn(false);
@@ -119,8 +123,8 @@ const App: React.FC = () => {
         const sourceImage = uploadedImage || currentImage || undefined;
         
         const prompt = isRefinement 
-          ? `Refine this logo: ${text}. Focus on stylized 3D typography for "${logoConfig.serverName}".`
-          : `Generate a premium 3D logo for server "${logoConfig.serverName}". Use CUSTOM ARTISTIC STYLIZED FONTS. Style: ${logoConfig.style}. Context: ${text}`;
+          ? `Refine this logo: ${text}. Focus on stylized 3D typography for "${logoConfig.serverName}". Ensure high-fidelity 2025 modern gaming aesthetics.`
+          : `Create a professional 3D MMORPG logo for a server named "${logoConfig.serverName}". Style: ${logoConfig.style}. Use CUSTOM STYLIZED ARTISTIC FONTS. Prompt: ${text}`;
         
         const resultImage = await generateLogo(prompt, sourceImage, isRefinement);
         
@@ -129,7 +133,7 @@ const App: React.FC = () => {
           newHistory.push(resultImage);
           setImageHistory(newHistory);
           setCurrentImageIndex(newHistory.length - 1);
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja concluída com sucesso! Apliquei tipografia estilizada e renderização 3D de alta definição.' }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Forja concluída! Sua marca foi gerada com tipografia estilizada e renderização 3D de alta performance.' }]);
           setStatus(GenerationStatus.SUCCESS);
         }
       } else {
@@ -157,7 +161,7 @@ const App: React.FC = () => {
 
   const handleQuickGenerate = () => {
     if (!logoConfig.serverName) return alert("Por favor, digite o nome do servidor antes de forjar.");
-    handleSendMessage(`Forje uma logomarca 3D épica e moderna para o servidor ${logoConfig.serverName}. Use fontes extremamente estilizadas e luxuosas.`);
+    handleSendMessage(`Forje uma logomarca 3D épica e luxuosa para o servidor ${logoConfig.serverName}. Use fontes extremamente estilizadas e renderização moderna de 2025.`);
   };
 
   if (checkingAuth) {
@@ -183,7 +187,7 @@ const App: React.FC = () => {
           
           <h1 className="text-4xl font-cinzel font-black tracking-tighter text-white mb-4 uppercase">L2 LOGO <span className="text-amber-500">FORGE</span></h1>
           <p className="text-gray-400 font-light mb-10 leading-relaxed text-base px-6">
-            O estúdio definitivo para logomarcas modernas com fontes estilizadas. Conecte sua conta Google para liberar o poder do Gemini 3 Pro.
+            Logomarcas de servidores modernas com fontes estilizadas de elite. Ative sua conta Google para começar a forjar agora.
           </p>
 
           <button
@@ -204,10 +208,10 @@ const App: React.FC = () => {
           <div className="space-y-4">
             <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
               <i className="fa-solid fa-shield-halved text-amber-500/40"></i>
-              Autenticação Segura via Google Console
+              Autenticação Segura Google
             </div>
-            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[9px] text-amber-500/40 hover:text-amber-500 transition-colors uppercase tracking-widest">
-              Saiba mais sobre chaves e faturamento
+            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[9px] text-amber-500/40 hover:text-amber-500 transition-colors uppercase tracking-widest border-b border-white/5 pb-1">
+              Saiba mais sobre a ativação e faturamento
             </a>
           </div>
         </div>

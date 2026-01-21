@@ -24,21 +24,26 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
       <div className="w-full h-full bg-black/40 border border-white/10 rounded-lg overflow-hidden flex items-center justify-center relative backdrop-blur-sm shadow-[0_0_50px_rgba(0,0,0,0.5)]">
         {status === GenerationStatus.ERROR ? (
           <div className="text-center p-8 animate-in fade-in zoom-in duration-300">
-            <i className="fa-solid fa-triangle-exclamation text-6xl text-amber-500/50 mb-4"></i>
-            <h3 className="text-xl font-cinzel text-white mb-2 uppercase tracking-widest">Limite Atingido</h3>
-            <p className="text-gray-400 text-sm mb-6 max-w-sm">
-              O limite de requisições gratuitas foi atingido. Ative sua conta Google para continuar usando o Gemini 3 Pro com fontes estilizadas e alta fidelidade.
+            <div className="mb-6 relative">
+              <i className="fa-solid fa-triangle-exclamation text-6xl text-amber-500 animate-pulse"></i>
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-[#050507]"></div>
+            </div>
+            <h3 className="text-xl font-cinzel text-white mb-2 uppercase tracking-widest font-black">Limite Atingido</h3>
+            <p className="text-gray-400 text-sm mb-8 max-w-sm mx-auto leading-relaxed">
+              O Google atingiu o limite de requisições gratuitas. Para continuar forjando com <span className="text-amber-500 font-bold">Gemini 3 Pro</span> e fontes personalizadas, ative sua conta Google.
             </p>
             {onSelectKey && (
               <button 
+                type="button"
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   onSelectKey();
                 }}
-                className="px-8 py-4 bg-amber-500 text-black font-black rounded-xl uppercase tracking-widest text-xs hover:bg-amber-400 transition-all shadow-[0_15px_35px_rgba(245,158,11,0.3)] flex items-center gap-3 mx-auto active:scale-95 transform cursor-pointer"
+                className="px-10 py-5 bg-amber-500 text-black font-black rounded-2xl uppercase tracking-[0.15em] text-sm hover:bg-amber-400 transition-all shadow-[0_20px_50px_rgba(245,158,11,0.4)] flex items-center gap-4 mx-auto active:scale-95 group"
               >
-                <i className="fa-brands fa-google"></i>
-                Entrar com Conta Google
+                <i className="fa-brands fa-google text-xl group-hover:rotate-12 transition-transform"></i>
+                Ativar Conta Google
               </button>
             )}
           </div>
@@ -63,15 +68,16 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
         )}
 
         {status === GenerationStatus.LOADING && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-20">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-20 backdrop-blur-md">
             <div className="relative w-24 h-24 mb-6">
               <div className="absolute inset-0 border-4 border-amber-500/20 rounded-full"></div>
               <div className="absolute inset-0 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
               <i className="fa-solid fa-hammer absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl text-amber-500"></i>
             </div>
-            <p className="text-amber-500 font-cinzel text-xl animate-pulse tracking-widest uppercase font-bold text-center px-4">
+            <p className="text-amber-500 font-cinzel text-xl animate-pulse tracking-[0.2em] uppercase font-black text-center px-4">
               {isRetrying ? 'Sincronizando Canais...' : 'Forjando Tipografia Estilizada...'}
             </p>
+            <p className="text-white/30 text-[10px] uppercase mt-2 tracking-widest">Renderização 3D em Alta Fidelidade</p>
           </div>
         )}
       </div>
