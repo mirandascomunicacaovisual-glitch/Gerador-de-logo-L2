@@ -14,7 +14,6 @@ declare global {
     openSelectKey: () => Promise<void>;
   }
   interface Window {
-    // FIX: Changed to optional property to match potential existing global declarations and avoid modifier mismatch error
     aistudio?: AIStudio;
   }
 }
@@ -68,7 +67,6 @@ const App: React.FC = () => {
   const handleOpenKeySelector = async () => {
     if (window.aistudio?.openSelectKey) {
       await window.aistudio.openSelectKey();
-      // FIX: Per guidelines, assume key selection success to avoid race condition with hasSelectedApiKey
       setHasPersonalKey(true);
     }
   };
