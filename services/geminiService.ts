@@ -1,7 +1,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Hierarquia de modelos otimizada para estabilidade
+// Modelos recomendados para geração de imagem e chat
 const IMAGE_MODELS_POOL = [
   'gemini-2.5-flash-image',
   'gemini-3-pro-image-preview'
@@ -58,23 +58,26 @@ const handleApiError = (error: any) => {
 
 export const generateLogo = async (prompt: string, baseImage?: string, isRefinement: boolean = false) => {
   return executeWithAutoRotation('image', async (modelId, isOptimized) => {
-    // Sempre cria uma nova instância para garantir o uso da chave mais recente
+    // Nova instância para usar a chave mais recente do seletor
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ACT AS A WORLD-CLASS GRAPHIC DESIGNER SPECIALIZING IN MODERN 3D MMORPG LOGOS.
-      CORE MISSION: GENERATE A STUNNING LOGO WITH MODERN STYLIZED TYPOGRAPHY.
-      SPECIFICATIONS:
-      - FONT STYLE: CUSTOM, EMBOSSED, 3D METALLIC, OR GLOWING CRYSTAL TEXT. 
-      - RENDERING: UNREAL ENGINE 5 STYLE, RAY-TRACING, CINEMATIC LIGHTING.
-      - ART STYLE: CURRENT GEN GAMING IDENTITY. NO GENERIC FONTS (ARIAL/TIMES).
-      - COMPOSITION: CENTERED, SHARP EDGES, EPIC AURA.
-      MANDATORY: THE NAME OF THE SERVER MUST BE THE MAIN FOCUS WITH A MODERN ARTISTIC FONT.
+      ROLE: MASTER BRAND ARCHITECT FOR HIGH-END GAMING COMMUNITIES.
+      OBJECTIVE: GENERATE A MODERN 3D LOGO WITH STYLIZED CUSTOM TYPOGRAPHY.
+      
+      CORE GUIDELINES:
+      - TYPOGRAPHY: USE STYLIZED, CUSTOM-MADE FONTS. FONT MUST BE EMBOSSED, 3D METALLIC, OR NEON CRYSTALLINE. NO STANDARD FONTS (ARIAL, TIMES).
+      - RENDER STYLE: UNREAL ENGINE 5, CINEMATIC 8K, RAY-TRACING, VOLUMETRIC LIGHTING.
+      - AESTHETIC: MODERN MMORPG (LINEAGE 2 / AION / WORLD OF WARCRAFT STYLE). 
+      - ELEMENTS: SHARP EDGES, EPIC AURA, MAGICAL GLOW, OR METALLIC FINISH.
+      - COMPOSITION: CENTERED LOGO ON A DARK OR CLEAN BACKGROUND.
+      
+      MANDATORY: THE SERVER NAME MUST BE RENDERED IN A STYLIZED ARTISTIC FONT AS THE PIECE'S CENTERPIECE.
     `;
 
     const instruction = isRefinement 
-      ? `UPDATING LOGO ARTWORK: ${prompt}. Preserve the brand identity but apply the changes requested with modern 3D rendering.` 
-      : `FORGING NEW BRAND IDENTITY: ${prompt}. The logo must look like a high-end Lineage 2 / Aion modern server logo with stylized custom lettering.`;
+      ? `UPDATING LOGO: ${prompt}. Apply changes using professional 3D rendering and stylized game typography.` 
+      : `CREATING NEW BRAND: ${prompt}. Forge a modern, epic 3D logo with a unique stylized font that represents a top-tier server.`;
 
     const parts: any[] = [{ text: `${systemPrompt}\n${instruction}` }];
 
@@ -124,7 +127,7 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "You are the 'Logo Forge Specialist'. Guide the user to choose the best styles for a modern MMORPG server. Be professional, technical, and always suggest stylized fonts and 3D effects.",
+        systemInstruction: "You are the 'Director of Forge'. Be professional, epic, and specialized in game branding. Always recommend stylized fonts and modern 3D effects for Lineage 2 server logos.",
       },
     });
 

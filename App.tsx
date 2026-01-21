@@ -42,17 +42,16 @@ const App: React.FC = () => {
   });
 
   const checkAuthStatus = useCallback(async () => {
-    // Verifica status inicial. No Vercel, se a API_KEY estiver no ENV, já libera.
-    // Caso contrário, aguarda o clique do usuário.
     try {
       if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         setIsAuthenticated(hasKey);
       } else if (process.env.API_KEY && process.env.API_KEY !== 'undefined') {
+        // Se houver uma chave injetada no ambiente (Vercel), libera o acesso
         setIsAuthenticated(true);
       }
     } catch (err) {
-      console.error("Auth check error:", err);
+      console.error("Erro na verificação inicial:", err);
     } finally {
       setCheckingAuth(false);
     }
@@ -65,18 +64,17 @@ const App: React.FC = () => {
   const handleLogin = async () => {
     setIsLoggingIn(true);
     try {
-      // Invocação direta da autenticação/seleção de chave do Google
-      // Assume-se que window.aistudio está disponível no contexto de execução
-      if (window.aistudio) {
+      // Inicia o fluxo de seleção de chave/login do Google
+      if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
         await window.aistudio.openSelectKey();
       }
       
-      // Conforme as regras: assumir sucesso após gatilho para evitar race condition
+      // Regra obrigatória: Assumir sucesso após disparar o seletor para evitar race condition
       setIsAuthenticated(true);
     } catch (error) {
-      console.error("Erro ao abrir login:", error);
-      // Fallback para permitir que o usuário tente novamente se algo falhar no carregamento do script
-      setIsAuthenticated(true); 
+      console.error("Erro ao abrir seletor:", error);
+      // Fallback: mesmo em caso de erro no script, tentamos permitir o acesso
+      setIsAuthenticated(true);
     } finally {
       setIsLoggingIn(false);
     }
@@ -126,7 +124,7 @@ const App: React.FC = () => {
           newHistory.push(resultImage);
           setImageHistory(newHistory);
           setCurrentImageIndex(newHistory.length - 1);
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'A forja foi concluída. Sua nova identidade visual está pronta.' }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'A forja foi concluída. Sua logomarca moderna com fontes estilizadas está pronta.' }]);
           setStatus(GenerationStatus.SUCCESS);
         }
       } else {
@@ -138,8 +136,10 @@ const App: React.FC = () => {
       console.error("Erro na Forja:", error);
       const errorMessage = error?.message || "";
       
+      // Se a chave for invalidada ou não encontrada, solicita novo login
       if (errorMessage.includes("Requested entity was not found") || errorMessage.includes("API_KEY_INVALID")) {
         setIsAuthenticated(false);
+        alert("Sessão expirada. Por favor, entre com sua conta Google novamente.");
       }
 
       if (errorMessage === 'QUOTA_EXCEEDED') {
@@ -166,7 +166,7 @@ const App: React.FC = () => {
         <div className="text-amber-500 animate-spin text-5xl mb-4">
           <i className="fa-solid fa-fire-flame-curved"></i>
         </div>
-        <p className="text-amber-500/50 font-cinzel tracking-widest text-sm animate-pulse uppercase">Conectando ao Estúdio...</p>
+        <p className="text-amber-500/50 font-cinzel tracking-widest text-sm animate-pulse uppercase">Conectando ao Estúdio de Design...</p>
       </div>
     );
   }
@@ -174,54 +174,50 @@ const App: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <div className="h-screen w-full bg-[#050507] flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent opacity-60"></div>
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/60 to-transparent"></div>
+        {/* Camada Visual de Fundo */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-amber-600/10 via-transparent to-transparent opacity-60"></div>
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
         
-        <div className="z-10 max-w-lg glass p-10 rounded-3xl border-amber-500/20 shadow-[0_0_80px_rgba(245,158,11,0.1)] transition-all">
-          <div className="w-24 h-24 bg-amber-500 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(245,158,11,0.4)] mx-auto mb-10">
-            <i className="fa-solid fa-fire-flame-curved text-5xl text-black"></i>
+        <div className="z-10 max-w-lg glass p-10 rounded-[2.5rem] border border-white/5 shadow-[0_0_100px_rgba(245,158,11,0.05)]">
+          <div className="w-20 h-20 bg-amber-500 rounded-3xl flex items-center justify-center shadow-[0_15px_40px_rgba(245,158,11,0.3)] mx-auto mb-10 group transition-transform hover:scale-105">
+            <i className="fa-solid fa-fire-flame-curved text-4xl text-black"></i>
           </div>
           
-          <h1 className="text-5xl font-cinzel font-black tracking-tighter text-white mb-6">L2 LOGO <span className="text-amber-500">FORGE</span></h1>
-          <p className="text-gray-400 font-light mb-10 leading-relaxed text-lg px-4">
-            Inicie sua jornada criativa. Conecte sua conta Google para acessar o gerador de logomarcas profissionais para servidores de Lineage 2.
+          <h1 className="text-4xl font-cinzel font-black tracking-tighter text-white mb-4 uppercase">L2 LOGO <span className="text-amber-500">FORGE</span></h1>
+          <p className="text-gray-400 font-light mb-10 leading-relaxed text-base px-6">
+            O estúdio definitivo para logomarcas de servidores de Lineage 2. Conecte sua conta Google para renderização profissional e acesso ilimitado.
           </p>
 
           <button
             onClick={handleLogin}
             disabled={isLoggingIn}
-            className="w-full py-6 bg-amber-500 hover:bg-amber-400 disabled:bg-gray-800 text-black font-black rounded-2xl transition-all shadow-[0_10px_35px_rgba(245,158,11,0.4)] flex items-center justify-center gap-4 uppercase tracking-tight mb-8 group"
+            className="w-full py-5 bg-amber-500 hover:bg-amber-400 disabled:bg-gray-800 text-black font-black rounded-2xl transition-all shadow-[0_10px_35px_rgba(245,158,11,0.3)] flex items-center justify-center gap-4 uppercase tracking-tighter mb-8 active:scale-95"
           >
             {isLoggingIn ? (
-              <i className="fa-solid fa-spinner fa-spin text-2xl"></i>
+              <i className="fa-solid fa-spinner fa-spin text-xl"></i>
             ) : (
               <>
-                <i className="fa-brands fa-google text-2xl group-hover:scale-110 transition-transform"></i>
-                <span className="text-xl">Entrar com Google</span>
+                <i className="fa-brands fa-google text-xl"></i>
+                <span className="text-lg">Entrar com Google</span>
               </>
             )}
           </button>
 
           <div className="space-y-4">
-            <div className="text-[11px] text-gray-500 uppercase tracking-[0.2em] font-bold flex items-center justify-center gap-2">
-              <i className="fa-solid fa-shield-halved text-amber-500/50"></i>
-              Autenticação Segura via Google
+            <div className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-bold flex items-center justify-center gap-2">
+              <i className="fa-solid fa-lock text-amber-500/40"></i>
+              Autenticação Segura Google Console
             </div>
             
             <a 
               href="https://ai.google.dev/gemini-api/docs/billing" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="inline-block text-[10px] text-amber-500/40 hover:text-amber-500 transition-colors underline decoration-dotted underline-offset-4 uppercase tracking-widest"
+              className="inline-block text-[9px] text-amber-500/40 hover:text-amber-500 transition-colors uppercase tracking-widest border-b border-amber-500/20 pb-1"
             >
-              Configurar Conta e Faturamento
+              Informações sobre cobrança e API
             </a>
           </div>
-        </div>
-        
-        <div className="absolute bottom-10">
-            <p className="text-[10px] text-gray-600 font-cinzel tracking-[0.5em] uppercase">Professional Gaming Identity Design</p>
         </div>
       </div>
     );
