@@ -8,11 +8,9 @@ interface PreviewAreaProps {
   serverName: string;
   onUndo?: () => void;
   canUndo?: boolean;
-  onSelectKey?: () => void;
-  isRetrying?: boolean;
 }
 
-const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, onUndo, canUndo, onSelectKey, isRetrying }) => {
+const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, onUndo, canUndo }) => {
   return (
     <div className="w-full max-w-2xl aspect-square relative group">
       {/* Decorative corners */}
@@ -24,27 +22,11 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
       <div className="w-full h-full bg-black/40 border border-white/10 rounded-lg overflow-hidden flex items-center justify-center relative backdrop-blur-sm shadow-[0_0_50px_rgba(0,0,0,0.5)]">
         {status === GenerationStatus.ERROR ? (
           <div className="text-center p-8 animate-in fade-in zoom-in duration-300">
-            <div className="mb-6 relative">
-              <i className="fa-solid fa-triangle-exclamation text-6xl text-amber-500 animate-pulse"></i>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-[#050507]"></div>
-            </div>
-            <h3 className="text-xl font-cinzel text-white mb-2 uppercase tracking-widest font-black">Acesso Necessário</h3>
-            <p className="text-gray-400 text-sm mb-8 max-w-sm mx-auto leading-relaxed">
-              O limite de uso gratuito foi atingido ou a conta precisa de autenticação. Conecte-se com sua conta Google para continuar.
+            <i className="fa-solid fa-circle-exclamation text-6xl text-red-500 mb-6"></i>
+            <h3 className="text-xl font-cinzel text-white mb-2 uppercase tracking-widest font-black">Erro na Forja</h3>
+            <p className="text-gray-400 text-sm mb-4 max-w-sm mx-auto">
+              Não foi possível gerar a imagem. Verifique sua conexão ou tente uma descrição diferente.
             </p>
-            {onSelectKey && (
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onSelectKey();
-                }}
-                className="px-10 py-5 bg-amber-500 text-black font-black rounded-2xl uppercase tracking-[0.15em] text-sm hover:bg-amber-400 transition-all shadow-[0_20px_50px_rgba(245,158,11,0.4)] flex items-center gap-4 mx-auto active:scale-95 group"
-              >
-                <i className="fa-brands fa-google text-xl group-hover:rotate-12 transition-transform"></i>
-                Reconectar com Google
-              </button>
-            )}
           </div>
         ) : image ? (
           <img 
@@ -74,23 +56,14 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
               <i className="fa-solid fa-hammer absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl text-amber-500"></i>
             </div>
             <p className="text-amber-500 font-cinzel text-xl animate-pulse tracking-[0.2em] uppercase font-black text-center px-4">
-              {isRetrying ? 'Sincronizando Canais...' : 'Forjando Tipografia Estilizada...'}
+              Forjando Tipografia...
             </p>
-            <p className="text-white/30 text-[10px] uppercase mt-2 tracking-widest">Renderização 3D Premium</p>
           </div>
         )}
       </div>
 
       {image && status !== GenerationStatus.LOADING && status !== GenerationStatus.ERROR && (
         <div className="absolute -bottom-16 left-0 right-0 flex justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {canUndo && (
-            <button 
-              onClick={onUndo}
-              className="px-6 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-500 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2"
-            >
-              <i className="fa-solid fa-rotate-left"></i> Desfazer
-            </button>
-          )}
           <button 
             onClick={() => {
               const link = document.createElement('a');
@@ -98,9 +71,9 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({ image, status, serverName, on
               link.download = `${serverName || 'l2-logo'}.png`;
               link.click();
             }}
-            className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2"
+            className="px-6 py-3 bg-amber-500 text-black rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-xl hover:bg-amber-400"
           >
-            <i className="fa-solid fa-download"></i> Baixar PNG
+            <i className="fa-solid fa-download"></i> Baixar Logo
           </button>
         </div>
       )}
