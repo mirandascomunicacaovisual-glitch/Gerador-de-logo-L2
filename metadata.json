@@ -1,7 +1,5 @@
 {
-  "name": "L2 Gerador-Logo",
-  "description": "Estúdio profissional para geração de logomarcas épicas de Lineage 2. IA de alta performance com auto-recuperação de quota.",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "name": "L2 Forge - Central de Contas",
+  "description": "Estúdio profissional de logomarcas modernas com autenticação centralizada e IA de alta performance.",
+  "requestFramePermissions": []
 }
