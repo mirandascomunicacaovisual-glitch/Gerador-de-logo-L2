@@ -33,7 +33,6 @@ async function executeWithAutoRotation<T>(
       lastError = error;
       const message = error?.message || "";
       
-      // Erros críticos de autenticação ou chave não encontrada devem subir direto
       if (message.includes("Requested entity was not found") || message.includes("API_KEY_INVALID") || message.includes("401") || message.includes("403")) {
         throw error;
       }
@@ -59,18 +58,23 @@ const handleApiError = (error: any) => {
 
 export const generateLogo = async (prompt: string, baseImage?: string, isRefinement: boolean = false) => {
   return executeWithAutoRotation('image', async (modelId, isOptimized) => {
+    // Sempre cria uma nova instância para garantir o uso da chave mais recente
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const systemPrompt = `
-      ACT AS A MASTER 3D GRAPHIC DESIGNER SPECIALIZING IN MODERN MMORPG LOGOS (LINEAGE 2 STYLE).
-      STYLE: UNREAL ENGINE 5 RENDER, 8K RESOLUTION, CINEMATIC LIGHTING, EPIC COMPOSITION.
-      MANDATORY: NO GENERIC FONTS. USE STYLIZED, EMBOSSED, METALLIC OR CRYSTALLINE TYPOGRAPHY.
-      CONTEXT: HIGH-END GAME BRANDING.
+      ACT AS A WORLD-CLASS GRAPHIC DESIGNER SPECIALIZING IN MODERN 3D MMORPG LOGOS.
+      CORE MISSION: GENERATE A STUNNING LOGO WITH MODERN STYLIZED TYPOGRAPHY.
+      SPECIFICATIONS:
+      - FONT STYLE: CUSTOM, EMBOSSED, 3D METALLIC, OR GLOWING CRYSTAL TEXT. 
+      - RENDERING: UNREAL ENGINE 5 STYLE, RAY-TRACING, CINEMATIC LIGHTING.
+      - ART STYLE: CURRENT GEN GAMING IDENTITY. NO GENERIC FONTS (ARIAL/TIMES).
+      - COMPOSITION: CENTERED, SHARP EDGES, EPIC AURA.
+      MANDATORY: THE NAME OF THE SERVER MUST BE THE MAIN FOCUS WITH A MODERN ARTISTIC FONT.
     `;
 
     const instruction = isRefinement 
-      ? `MODIFICATION REQUEST: ${prompt}. PLEASE UPDATE THE EXISTING ARTWORK MAINTAINING THE SAME THEME.` 
-      : `NEW MASTERPIECE LOGO REQUEST: ${prompt}. ENSURE THE SERVER NAME IS HIGHLY VISIBLE IN A STYLIZED CUSTOM FONT.`;
+      ? `UPDATING LOGO ARTWORK: ${prompt}. Preserve the brand identity but apply the changes requested with modern 3D rendering.` 
+      : `FORGING NEW BRAND IDENTITY: ${prompt}. The logo must look like a high-end Lineage 2 / Aion modern server logo with stylized custom lettering.`;
 
     const parts: any[] = [{ text: `${systemPrompt}\n${instruction}` }];
 
@@ -120,7 +124,7 @@ export const chatWithAI = async (message: string, history: { role: 'user' | 'ass
         parts: [{ text: h.content }]
       })),
       config: {
-        systemInstruction: "You are 'L2 Logo Forge Director'. Be technical, epic, and concise. Help users refine their game logo design choices.",
+        systemInstruction: "You are the 'Logo Forge Specialist'. Guide the user to choose the best styles for a modern MMORPG server. Be professional, technical, and always suggest stylized fonts and 3D effects.",
       },
     });
 
